@@ -14,7 +14,7 @@
 #>
 
 Clear-Host
-
+. .\scripts\Common\Common.ps1
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host " Enterprise Active Directory Assessment" -ForegroundColor Cyan
