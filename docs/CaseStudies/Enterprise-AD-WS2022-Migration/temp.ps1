@@ -1,6 +1,14 @@
-$Forest = Get-ADForest
-
-foreach ($Domain in $Forest.Domains) {
-    Get-ADDomainController -Server $Domain -Filter * |
-    Select-Object HostName, Site, IPv4Address, OperatingSystem, IsGlobalCatalog
+$DCs = foreach ($Domain in (Get-ADForest).Domains) {
+    Get-ADDomainController -Server $Domain -Filter *
 }
+
+$DCs |
+Group-Object OperatingSystem |
+Select-Object Name,Count
+
+
+($DCs | Where-Object IsGlobalCatalog).Count
+
+($DCs | Where-Object IsGlobalCatalog).Count
+
+repadmin /replsummary
