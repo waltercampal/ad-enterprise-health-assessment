@@ -7,47 +7,22 @@
     Horizon Labs
 
 .VERSION
-    0.3.0
+    0.3.1
 #>
-
-param(
-    [PSCredential]$Credential
-)
 
 Import-Module ActiveDirectory
 
-if ($Credential) {
-    $Forest = Get-ADForest -Credential $Credential
-}
-else {
-    $Forest = Get-ADForest
-}
+$Forest = Get-ADForest
 
 $DomainInfo = foreach ($DomainName in $Forest.Domains)
 {
-    if ($Credential) {
-        $Domain = Get-ADDomain `
-            -Identity $DomainName `
-            -Server $DomainName `
-            -Credential $Credential
-    }
-    else {
-        $Domain = Get-ADDomain `
-            -Identity $DomainName `
-            -Server $DomainName
-    }
+    $Domain = Get-ADDomain `
+        -Identity $DomainName `
+        -Server $DomainName
 
-    $DCCount = if ($Credential) {
-        (Get-ADDomainController `
-            -Server $DomainName `
-            -Filter * `
-            -Credential $Credential).Count
-    }
-    else {
-        (Get-ADDomainController `
-            -Server $DomainName `
-            -Filter *).Count
-    }
+    $DCCount = (Get-ADDomainController `
+        -Server $DomainName `
+        -Filter *).Count
 
     [PSCustomObject]@{
 

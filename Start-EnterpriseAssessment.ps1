@@ -1,45 +1,47 @@
 <#
 .SYNOPSIS
-    Starts the Enterprise Active Directory Health Assessment.
-
-.DESCRIPTION
-    Orchestrates all assessment modules and generates the final reports.
+    Runs the complete Enterprise Active Directory Health Assessment.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.3.0
 #>
 
-Clear-Host
-. .\scripts\Common\Common.ps1
+Import-Module ActiveDirectory
+
+$Forest = Get-ADForest
+
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host " Enterprise Active Directory Assessment" -ForegroundColor Cyan
-Write-Host " Horizon Labs" -ForegroundColor Cyan
+Write-Host " Enterprise AD Health Assessment" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ReportPath = ".\reports"
-
-if (!(Test-Path $ReportPath)) {
-    New-Item -ItemType Directory -Path $ReportPath | Out-Null
-}
-
-Write-Host "Starting assessment..." -ForegroundColor Yellow
-
-.\scripts\Get-ForestInformation.ps1
-
-.\scripts\Get-DomainInformation.ps1
-
-.\scripts\Get-FSMORoles.ps1
-
-.\scripts\Get-DomainControllerInventory.ps1
+$Forest      = .\scripts\Get-ForestInformation.ps1
+$Domains     = .\scripts\Get-DomainInformation.ps1
+$FSMO        = .\scripts\Get-FSMORoles.ps1
+$DCs         = .\scripts\Get-DomainControllerInventory.ps1
+$Replication = .\scripts\Health\Get-HLReplicationHealth.ps1
+$Sites       = .\scripts\Get-SitesInformation.ps1
 
 Write-Host ""
-Write-Host "Assessment completed successfully." -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Green
+Write-Host " Assessment completed successfully." -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Reports generated in:"
-Write-Host $ReportPath
+
+Write-Host "Forest............... $($Forest.ForestName)"
+Write-Host "Domains.............. $($Forest.DomainCount)"
+Write-Host "Domain Controllers... $($DCs.Count)"
+Write-Host "Replication Entries.. $($Replication.Count)"
+Write-Host "Sites................ $($Sites.Count)"
+
+$Summary = .\scripts\Reporting\Get-ExecutiveSummary.ps1 `
+    -Forest $Forest `
+    -Domains $Domains `
+    -FSMO $FSMO `
+    -DCs $DCs `
+    -Replication $Replication

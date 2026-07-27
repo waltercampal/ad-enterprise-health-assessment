@@ -10,18 +10,10 @@
     0.2.0
 #>
 
-param(
-    [PSCredential]$Credential
-)
 
 Import-Module ActiveDirectory
 
-if ($Credential) {
-    $Forest = Get-ADForest -Credential $Credential
-}
-else {
-    $Forest = Get-ADForest
-}
+$Forest = Get-ADForest
 
 $ForestInfo = [PSCustomObject]@{
 
