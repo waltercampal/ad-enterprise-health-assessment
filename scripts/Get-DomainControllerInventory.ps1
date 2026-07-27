@@ -1,63 +1,61 @@
 <#
 .SYNOPSIS
-    Retrieves an inventory of all Domain Controllers in the Active Directory forest.
-
-.DESCRIPTION
-    Collects information about each Domain Controller including:
-    - Hostname
-    - Domain
-    - Site
-    - IPv4 Address
-    - Operating System
-    - Global Catalog
-    - Read Only DC
-    - Availability
+    Retrieves all Domain Controllers in the Active Directory Forest.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.3.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 Import-Module ActiveDirectory
 
-$DomainControllers = Get-ADDomainController -Filter *
-
-$Inventory = foreach ($DC in $DomainControllers) {
-
-    [PSCustomObject]@{
-
-        Name            = $DC.HostName
-        Domain          = $DC.Domain
-        Site            = $DC.Site
-        IPv4Address     = $DC.IPv4Address
-        OperatingSystem = $DC.OperatingSystem
-        GlobalCatalog   = $DC.IsGlobalCatalog
-        ReadOnly        = $DC.IsReadOnly
-
-        Online = if (Test-Connection $DC.HostName -Count 1 -Quiet) {
-            "Yes"
-        }
-        else {
-            "No"
-        }
-
-    }
-
+if ($Credential) {
+    $Forest = Get-ADForest -Credential $Credential
+}
+else {
+    $Forest = Get-ADForest
 }
 
-$Inventory | Sort-Object Name
+$DCInventory = foreach ($DomainName in $Forest.Domains)
+{
+    if ($Credential) {
+        $DCs = Get-ADDomainController `
+            -Server $DomainName `
+            -Filter * `
+            -Credential $Credential
+    }
+    else {
+        $DCs = Get-ADDomainController `
+            -Server $DomainName `
+            -Filter *
+    }
 
-$Inventory |
-Export-Csv `
--Path ".\reports\DomainControllerInventory.csv" `
--NoTypeInformation `
--Encoding UTF8
+    foreach ($DC in $DCs)
+    {
+        [PSCustomObject]@{
 
-Write-Host ""
-Write-Host "Assessment completed successfully." -ForegroundColor Green
-Write-Host ""
-Write-Host "Inventory exported to:"
-Write-Host ".\reports\DomainControllerInventory.csv"
+            Forest              = $Forest.Name
+            Domain              = $DomainName
+
+            HostName            = $DC.HostName
+            Name                = $DC.Name
+            Site                = $DC.Site
+
+            IPv4Address         = $DC.IPv4Address
+            OperatingSystem     = $DC.OperatingSystem
+
+            IsGlobalCatalog     = $DC.IsGlobalCatalog
+            IsReadOnly          = $DC.IsReadOnly
+
+        }
+    }
+}
+
+return $DCInventory

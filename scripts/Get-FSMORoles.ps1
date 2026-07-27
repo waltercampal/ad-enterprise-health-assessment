@@ -1,21 +1,31 @@
 <#
 .SYNOPSIS
-    Retrieves all FSMO role holders in the Active Directory Forest.
+    Retrieves all FSMO role holders.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 Import-Module ActiveDirectory
 
-$Forest = Get-ADForest
-$Domain = Get-ADDomain
+if ($Credential) {
+    $Forest = Get-ADForest -Credential $Credential
+    $Domain = Get-ADDomain -Credential $Credential
+}
+else {
+    $Forest = Get-ADForest
+    $Domain = Get-ADDomain
+}
 
-$FSMO = [PSCustomObject]@{
+$FSMOInfo = [PSCustomObject]@{
 
     SchemaMaster       = $Forest.SchemaMaster
     DomainNamingMaster = $Forest.DomainNamingMaster
@@ -25,13 +35,4 @@ $FSMO = [PSCustomObject]@{
 
 }
 
-$FSMO
-
-$FSMO |
-Export-Csv `
--Path ".\reports\FSMORoles.csv" `
--NoTypeInformation `
--Encoding UTF8
-
-Write-Host ""
-Write-Host "FSMO roles exported successfully." -ForegroundColor Green
+return $FSMOInfo

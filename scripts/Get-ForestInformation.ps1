@@ -7,32 +7,42 @@
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 Import-Module ActiveDirectory
 
-$Forest = Get-ADForest
+if ($Credential) {
+    $Forest = Get-ADForest -Credential $Credential
+}
+else {
+    $Forest = Get-ADForest
+}
 
-$Info = [PSCustomObject]@{
+$ForestInfo = [PSCustomObject]@{
 
-    ForestName = $Forest.Name
-    ForestMode = $Forest.ForestMode
-    RootDomain = $Forest.RootDomain
-    Domains = ($Forest.Domains -join ", ")
-    Sites = ($Forest.Sites -join ", ")
-    GlobalCatalogs = ($Forest.GlobalCatalogs.Count)
-    UPNSuffixes = ($Forest.UPNSuffixes -join ", ")
+    ForestName         = $Forest.Name
+    ForestMode         = $Forest.ForestMode
+    RootDomain         = $Forest.RootDomain
+
+    DomainCount        = $Forest.Domains.Count
+    Domains            = $Forest.Domains
+
+    SiteCount          = $Forest.Sites.Count
+    Sites              = $Forest.Sites
+
+    GlobalCatalogCount = $Forest.GlobalCatalogs.Count
+    GlobalCatalogs     = $Forest.GlobalCatalogs
+
+    UPNSuffixes        = $Forest.UPNSuffixes
+
+    SchemaMaster       = $Forest.SchemaMaster
+    DomainNamingMaster = $Forest.DomainNamingMaster
 
 }
 
-$Info
-
-$Info |
-Export-Csv `
--Path ".\reports\ForestInformation.csv" `
--NoTypeInformation `
--Encoding UTF8
-
-Write-Host ""
-Write-Host "Forest information exported successfully." -ForegroundColor Green
+return $ForestInfo
