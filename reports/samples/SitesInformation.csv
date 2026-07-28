@@ -1,0 +1,7 @@
+"SiteName","DomainControllers","Subnets"
+"HQ-Fabrikam","4","2"
+"DR-Fabrikam","2","1"
+"Hub-Central","3","2"
+"Branch-North-01","1","1"
+"Branch-North-02","1","1"
+"Branch-South-01","1","1"

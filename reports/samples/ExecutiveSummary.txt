@@ -1,0 +1,84 @@
+==========================================
+Enterprise Active Directory Assessment
+==========================================
+
+Assessment Date
+---------------
+07/27/2026 16:04:27
+
+Forest
+------
+Forest Name............. fabrikam.com
+Forest Functional Level. Windows2016Forest
+
+Domains
+-------
+4
+
+Domain Controllers
+------------------
+Total.................... 12
+Windows Server 2016...... 12
+Windows Server 2019...... 0
+Windows Server 2022...... 0
+
+Global Catalogs
+---------------
+8
+
+FSMO Roles
+----------
+Schema Master...         DCFAB20.fabrikam.com
+Domain Naming Master...  DCFAB20.fabrikam.com
+
+fabrikam.com
+   PDC Emulator...      DCFAB21.fabrikam.com
+   RID Master...        DCFAB20.fabrikam.com
+   Infrastructure Master... DCFAB20.fabrikam.com
+
+retail.fabrikam.com
+   PDC Emulator...      DCRET21.retail.fabrikam.com
+   RID Master...        DCRET20.retail.fabrikam.com
+   Infrastructure Master... DCRET22.retail.fabrikam.com
+
+treasury.fabrikam.com
+   PDC Emulator...      DCTRE20.treasury.fabrikam.com
+   RID Master...        DCTRE20.treasury.fabrikam.com
+   Infrastructure Master... DCTRE21.treasury.fabrikam.com
+
+branches.fabrikam.com
+   PDC Emulator...      DCBR21.branches.fabrikam.com
+   RID Master...        DCBR20.branches.fabrikam.com
+   Infrastructure Master... DCBR22.branches.fabrikam.com
+
+Health Summary
+--------------
+Category                  Healthy  Warning  Critical  Skipped
+Replication...............    9       1        1         0
+DNS........................   40       1        2         4
+Time.......................   11       1        0         0
+SYSVOL / DFSR..............   11       0        1         0
+Group Policy...............   17       2        0         0
+Security Baseline..........    9       3        1         0
+Server Configuration........   10       2        0         0
+Event Log...................   10       2        0         0
+
+Migration Readiness (Windows Server 2016 -> 2022)
+--------------------------------------------------
+Schema Version.............. Healthy - Current schema version supports Windows Server 2022 DCs.
+Legacy OS Blockers........... None found (no Windows Server 2008/2008 R2 Domain Controllers).
+FRS -> DFSR Migration........ Complete on 3 of 4 domains. branches.fabrikam.com still requires validation.
+Additional DC Roles.......... ADCS (Certificate Authority) detected on DCTRE20.treasury.fabrikam.com. Requires a dedicated CA migration plan before decommission.
+
+Infrastructure Score
+---------------------
+82 / 100  (Good - remediate Critical/Warning findings before starting DC promotions)
+
+Replication
+-----------
+Partners................ 11
+Errors.................. 1
+
+==========================================
+Assessment completed successfully.
+==========================================

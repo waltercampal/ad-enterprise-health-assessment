@@ -1,0 +1,5 @@
+"DomainName","NetBIOSName","DomainMode","DomainControllers","ChildDomains","PDCEmulator","RIDMaster","InfrastructureMaster"
+"fabrikam.com","FABRIKAM","Windows2016Domain","2","3","DCFAB21.fabrikam.com","DCFAB20.fabrikam.com","DCFAB20.fabrikam.com"
+"retail.fabrikam.com","RETAIL","Windows2016Domain","3","0","DCRET21.retail.fabrikam.com","DCRET20.retail.fabrikam.com","DCRET22.retail.fabrikam.com"
+"treasury.fabrikam.com","TREASURY","Windows2016Domain","2","0","DCTRE20.treasury.fabrikam.com","DCTRE20.treasury.fabrikam.com","DCTRE21.treasury.fabrikam.com"
+"branches.fabrikam.com","BRANCHES","Windows2016Domain","5","0","DCBR21.branches.fabrikam.com","DCBR20.branches.fabrikam.com","DCBR22.branches.fabrikam.com"

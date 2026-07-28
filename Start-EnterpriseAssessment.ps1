@@ -7,12 +7,29 @@
     Horizon Labs
 
 .VERSION
-    0.3.0
+    2.0.0
 #>
 
 Import-Module ActiveDirectory
+Import-Module GroupPolicy -ErrorAction SilentlyContinue
 
-$Forest = Get-ADForest
+# ------------------------------------------------------------
+# Load Common Functions
+# ------------------------------------------------------------
+
+. .\scripts\Common\Common.ps1
+
+# ------------------------------------------------------------
+# Load Health Modules
+# ------------------------------------------------------------
+
+Get-ChildItem -Path .\scripts\Health\*.ps1 | ForEach-Object {
+    . $_.FullName
+}
+
+# ------------------------------------------------------------
+# Banner
+# ------------------------------------------------------------
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
@@ -20,12 +37,111 @@ Write-Host " Enterprise AD Health Assessment" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$Forest      = .\scripts\Get-ForestInformation.ps1
-$Domains     = .\scripts\Get-DomainInformation.ps1
-$FSMO        = .\scripts\Get-FSMORoles.ps1
-$DCs         = .\scripts\Get-DomainControllerInventory.ps1
-$Replication = .\scripts\Health\Get-HLReplicationHealth.ps1
-$Sites       = .\scripts\Get-SitesInformation.ps1
+# ------------------------------------------------------------
+# Discovery
+# ------------------------------------------------------------
+
+Write-Step "Running Discovery modules..."
+
+$Forest  = .\scripts\Get-ForestInformation.ps1
+$Domains = .\scripts\Get-DomainInformation.ps1
+$FSMO    = .\scripts\Get-FSMORoles.ps1
+$DCs     = .\scripts\Get-DomainControllerInventory.ps1
+$Sites   = .\scripts\Get-SitesInformation.ps1
+
+# ------------------------------------------------------------
+# Export Discovery
+# ------------------------------------------------------------
+
+Write-Step "Exporting Discovery results..."
+
+Export-AssessmentCsv -Data $Forest  -Name "ForestInformation"
+Export-AssessmentCsv -Data $Domains -Name "DomainInformation"
+Export-AssessmentCsv -Data $FSMO    -Name "FSMORoles"
+Export-AssessmentCsv -Data $DCs     -Name "DomainControllerInventory"
+Export-AssessmentCsv -Data $Sites   -Name "SitesInformation"
+
+# ------------------------------------------------------------
+# Health
+# ------------------------------------------------------------
+
+Write-Step "Running Health modules..."
+
+$Replication        = Get-HLReplicationHealth   -DomainControllers $DCs
+$DNSHealth           = Get-HLDNSHealth            -DomainControllers $DCs
+$TimeHealth          = Get-HLTimeHealth           -DomainControllers $DCs
+$SysvolHealth        = Get-HLSysvolHealth         -DomainControllers $DCs
+$GPOHealth           = Get-HLGPOHealth            -Domains $Domains
+$SecurityBaseline    = Get-HLSecurityBaseline      -DomainControllers $DCs -Domains $Domains
+$ServerConfig        = Get-HLServerConfig         -DomainControllers $DCs
+$EventLogHealth      = Get-HLEventLogHealth       -DomainControllers $DCs
+$MigrationReadiness  = Get-HLMigrationReadiness   -Forest $Forest -DomainControllers $DCs
+
+$HealthResults = @(
+    $Replication
+    $DNSHealth
+    $TimeHealth
+    $SysvolHealth
+    $GPOHealth
+    $SecurityBaseline
+    $ServerConfig
+    $EventLogHealth
+    $MigrationReadiness
+)
+
+# ------------------------------------------------------------
+# Export Health
+# ------------------------------------------------------------
+
+Write-Step "Exporting Health results..."
+
+Export-AssessmentCsv -Data $Replication       -Name "ReplicationHealth"
+Export-AssessmentCsv -Data $DNSHealth          -Name "DNSHealth"
+Export-AssessmentCsv -Data $TimeHealth         -Name "TimeHealth"
+Export-AssessmentCsv -Data $SysvolHealth       -Name "SysvolHealth"
+Export-AssessmentCsv -Data $GPOHealth          -Name "GPOHealth"
+Export-AssessmentCsv -Data $SecurityBaseline   -Name "SecurityBaseline"
+Export-AssessmentCsv -Data $ServerConfig       -Name "ServerConfig"
+Export-AssessmentCsv -Data $EventLogHealth     -Name "EventLogHealth"
+Export-AssessmentCsv -Data $MigrationReadiness -Name "MigrationReadiness"
+
+# ------------------------------------------------------------
+# Infrastructure Score
+# ------------------------------------------------------------
+
+Write-Step "Calculating Infrastructure Score..."
+
+$Score = .\scripts\Reporting\Get-InfrastructureScore.ps1 -HealthResults $HealthResults
+
+# ------------------------------------------------------------
+# HTML Report
+# ------------------------------------------------------------
+
+Write-Step "Generating HTML report..."
+
+.\scripts\Reporting\Get-HTMLReport.ps1 `
+    -Forest $Forest `
+    -DCs $DCs `
+    -HealthResults $HealthResults `
+    -Score $Score `
+    | Out-Null
+
+# ------------------------------------------------------------
+# Executive Summary
+# ------------------------------------------------------------
+
+Write-Step "Generating Executive Summary..."
+
+$Summary = .\scripts\Reporting\Get-ExecutiveSummary.ps1 `
+    -Forest $Forest `
+    -FSMO $FSMO `
+    -DCs $DCs `
+    -HealthResults $HealthResults `
+    -Score $Score
+
+# ------------------------------------------------------------
+# Finish
+# ------------------------------------------------------------
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
@@ -36,12 +152,10 @@ Write-Host ""
 Write-Host "Forest............... $($Forest.ForestName)"
 Write-Host "Domains.............. $($Forest.DomainCount)"
 Write-Host "Domain Controllers... $($DCs.Count)"
-Write-Host "Replication Entries.. $($Replication.Count)"
 Write-Host "Sites................ $($Sites.Count)"
+Write-Host "Health Checks Run.... $($HealthResults.Count)"
+Write-Host "Infrastructure Score. $($Score.Score) / 100"
 
-$Summary = .\scripts\Reporting\Get-ExecutiveSummary.ps1 `
-    -Forest $Forest `
-    -Domains $Domains `
-    -FSMO $FSMO `
-    -DCs $DCs `
-    -Replication $Replication
+Write-Host ""
+
+Write-Success "Enterprise Active Directory Health Assessment completed."

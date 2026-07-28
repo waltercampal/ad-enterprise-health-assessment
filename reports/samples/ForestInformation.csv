@@ -1,0 +1,2 @@
+"ForestName","ForestMode","RootDomain","Domains","Sites","GlobalCatalogs","UPNSuffixes"
+"fabrikam.com","Windows2016Forest","fabrikam.com","fabrikam.com, retail.fabrikam.com, treasury.fabrikam.com, branches.fabrikam.com","HQ-Fabrikam, DR-Fabrikam, Hub-Central, Branch-North-01, Branch-North-02, Branch-South-01","8","fabrikam.com, fabrikambank.com"

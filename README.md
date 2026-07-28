@@ -68,15 +68,21 @@ This repository is part of a broader Microsoft Infrastructure portfolio focused 
 
 ## Roadmap
 
-- [ ] Domain Controller Inventory
-- [ ] Forest Health Assessment
-- [ ] Replication Health Checks
-- [ ] DNS Analyzer
-- [ ] Group Policy Assessment
-- [ ] Security Assessment
-- [ ] HTML Report Generator
-- [ ] Infrastructure Score
+- [x] Domain Controller Inventory
+- [x] Forest Health Assessment
+- [x] Replication Health Checks
+- [x] DNS Analyzer
+- [x] Group Policy Assessment
+- [x] Security Assessment
+- [x] HTML Report Generator
+- [x] Infrastructure Score
 - [ ] Azure AD / Entra Integration
+
+See [`ROADMAP.md`](ROADMAP.md) for the full, versioned roadmap and
+[`docs/Migration-2016-2022-Completion-Plan.md`](docs/Migration-2016-2022-Completion-Plan.md)
+for how the toolkit was brought to completion in support of a real Windows
+Server 2016 -> 2022 migration, documented as a full
+[case study](docs/CaseStudies/Enterprise-AD-WS2022-Migration/).
 
 ---
 

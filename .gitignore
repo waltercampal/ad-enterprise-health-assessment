@@ -1,0 +1,13 @@
+# Real assessment output (contains live environment data: hostnames, IPs, site
+# names, security findings). Never commit this. Only the anonymized examples
+# under reports/samples/ are meant to be tracked and shown publicly.
+/reports/*.csv
+/reports/*.txt
+/reports/*.html
+!/reports/samples/
+!/reports/samples/**
+
+# PowerShell / editor noise
+*.ps1xml.bak
+*.log
+.vscode/

@@ -12,9 +12,6 @@
 
 Import-Module ActiveDirectory
 
-# Forest information
-$Forest = Get-ADForest
-
 # Retrieve all objects only once
 $AllSites = Get-ADReplicationSite -Filter *
 
@@ -38,14 +35,5 @@ $Sites = foreach ($Site in ($AllSites | Sort-Object Name))
         Subnets           = @($SiteSubnets).Count
     }
 }
-
-$Sites |
-    Export-Csv `
-        -Path ".\reports\SitesInformation.csv" `
-        -NoTypeInformation `
-        -Encoding UTF8
-
-Write-Host ""
-Write-Host "Sites information exported successfully." -ForegroundColor Green
 
 return $Sites

@@ -7,57 +7,65 @@
     Horizon Labs
 
 .VERSION
-    0.2.1
+    1.1.0
 #>
 
-Import-Module ActiveDirectory
+function Get-HLReplicationHealth {
 
-$Forest = Get-ADForest
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [array]$DomainControllers
+    )
 
-$DomainControllers = foreach ($DomainName in $Forest.Domains)
-{
-    Get-ADDomainController `
-        -Filter * `
-        -Server $DomainName
-}
+    $Results = @()
 
-$Replication = foreach ($DC in $DomainControllers)
-{
-    try
-    {
-        Get-ADReplicationPartnerMetadata `
-            -Target $DC.HostName `
-            -ErrorAction Stop |
-        Select-Object `
-            Server,
-            Partner,
-            Partition,
-            LastReplicationSuccess,
-            LastReplicationResult,
-            ConsecutiveReplicationFailures
-    }
-    catch
-    {
-        Write-Warning "Failed to retrieve replication metadata from $($DC.HostName)"
+    foreach ($DC in $DomainControllers) {
 
-        [PSCustomObject]@{
-            Server                         = $DC.HostName
-            Partner                        = $null
-            Partition                      = $null
-            LastReplicationSuccess         = $null
-            LastReplicationResult          = "UNREACHABLE"
-            ConsecutiveReplicationFailures = $null
+        Write-Verbose "Checking replication health on $($DC.HostName)"
+
+        try {
+            $ReplicationMetadata = Get-ADReplicationPartnerMetadata `
+                -Target $DC.HostName `
+                -ErrorAction Stop
+
+            foreach ($Partner in $ReplicationMetadata) {
+
+                if ($Partner.LastReplicationResult -eq 0) {
+                    $Results += New-HealthResult `
+                        -Category "Replication" `
+                        -Check "Replication Partner" `
+                        -Target $Partner.Partner `
+                        -Status Healthy `
+                        -Severity Info `
+                        -Message "Replication completed successfully."
+                }
+                else {
+                    $Results += New-HealthResult `
+                        -Category "Replication" `
+                        -Check "Replication Partner" `
+                        -Target $Partner.Partner `
+                        -Status Critical `
+                        -Severity High `
+                        -Message "Replication failed. Error code: $($Partner.LastReplicationResult)" `
+                        -Recommendation "Investigate Active Directory replication for this partner."
+                }
+            }
+        }
+        catch {
+
+            Write-Warning "Failed to retrieve replication metadata from $($DC.HostName)"
+
+            $Results += New-HealthResult `
+                -Category "Replication" `
+                -Check "Domain Controller Reachability" `
+                -Target $DC.HostName `
+                -Status Warning `
+                -Severity Medium `
+                -Message "Unable to retrieve replication metadata." `
+                -Recommendation "Verify connectivity, AD Web Services and Domain Controller availability."
         }
     }
+
+    return $Results
 }
-
-$Replication |
-    Export-Csv `
-        -Path ".\reports\ReplicationHealth.csv" `
-        -NoTypeInformation `
-        -Encoding UTF8
-
-Write-Host ""
-Write-Host "Replication health exported successfully." -ForegroundColor Green
-
-return $Replication

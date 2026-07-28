@@ -62,10 +62,4 @@ foreach ($DomainName in $Forest.Domains)
     }
 }
 
-$Results |
-    Export-Csv `
-        -Path ".\reports\FSMORoles.csv" `
-        -NoTypeInformation `
-        -Encoding UTF8
-
 return $Results
