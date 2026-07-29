@@ -1,0 +1,1788 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AD Health Assessment - fabrikam.com</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f2ef;
+  --ink:#0b0b0b; --ink-2:#52514e; --ink-muted:#898781;
+  --border:rgba(11,11,11,.10); --grid:#e1e0d9;
+  --accent:#2a78d6; --accent-ink:#ffffff;
+  --good:#0ca30c; --warning:#fab219; --critical:#d03b3b; --skipped:#898781;
+  --font-display:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --font-body:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:"SF Mono","Cascadia Code",Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --bg:#0d0d0d; --surface:#1a1a19; --surface-2:#20201e;
+    --ink:#ffffff; --ink-2:#c3c2b7; --ink-muted:#898781;
+    --border:rgba(255,255,255,.10); --grid:#2c2c2a;
+    --accent:#3987e5; --accent-ink:#0b0b0b;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0d0d0d; --surface:#1a1a19; --surface-2:#20201e;
+  --ink:#ffffff; --ink-2:#c3c2b7; --ink-muted:#898781;
+  --border:rgba(255,255,255,.10); --grid:#2c2c2a;
+  --accent:#3987e5; --accent-ink:#0b0b0b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 1.5rem 4rem}
+button{font:inherit}
+button:focus-visible, a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+header.top{
+  position:sticky; top:0; z-index:20; background:var(--bg);
+  border-bottom:1px solid var(--border); padding:1.25rem 1.5rem 1rem;
+  backdrop-filter:saturate(180%) blur(8px);
+}
+header.top .row{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.masthead h1{
+  font-family:var(--font-display); font-size:1.5rem; font-weight:600; margin:0;
+  text-wrap:balance; letter-spacing:.01em;
+}
+.masthead .meta{color:var(--ink-muted); font-size:.85rem; margin-top:.15rem}
+.masthead .meta b{color:var(--ink-2); font-weight:600}
+.theme-toggle{
+  margin-left:auto; border:1px solid var(--border); background:var(--surface);
+  color:var(--ink-2); border-radius:999px; padding:.4rem .8rem; cursor:pointer;
+  font-size:.8rem;
+}
+
+.hero{display:flex; gap:2rem; align-items:center; padding:1.75rem 0; flex-wrap:wrap}
+.gauge{position:relative; width:132px; height:132px; flex:none}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .track{fill:none; stroke:var(--grid); stroke-width:10}
+.gauge .fill{fill:none; stroke:var(--accent); stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset .6s ease}
+.gauge .label{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.gauge .num{font-family:var(--font-display); font-size:2.1rem; font-weight:600; font-variant-numeric:tabular-nums; line-height:1}
+.gauge .of{font-size:.7rem; color:var(--ink-muted); letter-spacing:.05em; text-transform:uppercase; margin-top:.2rem}
+
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:1px; background:var(--border); border:1px solid var(--border); border-radius:12px; overflow:hidden; flex:1; min-width:280px}
+.stat{background:var(--surface); padding:.9rem 1rem}
+.stat .n{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:1.5rem; font-weight:600}
+.stat .l{font-size:.72rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.06em; margin-top:.15rem}
+.stat.good .n{color:var(--good)}
+.stat.warning .n{color:var(--warning)}
+.stat.critical .n{color:var(--critical)}
+
+.section-title{
+  font-family:var(--font-display); font-size:1.05rem; font-weight:600; margin:0 0 .9rem;
+}
+
+.dashboard{padding:.5rem 0 1.5rem}
+.dash-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:.85rem}
+.dash-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:12px;
+  padding:1rem .75rem; display:flex; flex-direction:column; align-items:center; gap:.5rem;
+  text-decoration:none; color:inherit; text-align:center; transition:transform .15s ease, border-color .15s ease;
+}
+.dash-card:hover{transform:translateY(-2px); border-color:var(--accent)}
+.dash-donut{position:relative; width:92px; height:92px; flex:none}
+.donut-svg{transform:rotate(-90deg)}
+.donut-track{fill:none; stroke:var(--grid)}
+.donut-arc{fill:none; stroke-linecap:round; transition:stroke-dashoffset .6s ease}
+.donut-arc.rev-good{stroke:var(--good)}
+.donut-arc.rev-warning{stroke:var(--warning)}
+.donut-arc.rev-critical{stroke:var(--critical)}
+.donut-arc.rev-skipped{stroke:var(--skipped)}
+.dash-label{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center}
+.dash-pct{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:1.15rem; font-weight:600}
+.dash-sub{font-size:.6rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.05em}
+.dash-name{font-weight:600; font-size:.88rem}
+.dash-count{font-size:.72rem; color:var(--ink-muted)}
+.dash-count b.crit{color:var(--critical)}
+.dash-count b.warn{color:#9a6b00}
+:root[data-theme="dark"] .dash-count b.warn, @media (prefers-color-scheme:dark){.dash-count b.warn{color:var(--warning)}}
+
+.spotlight{padding:.5rem 0 2rem}
+.spot-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:.85rem}
+.spot-card{
+  background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--ink-muted);
+  border-radius:10px; padding:.85rem 1rem; display:flex; flex-direction:column; gap:.3rem;
+}
+.spot-card.spot-Critical{border-left-color:var(--critical)}
+.spot-card.spot-Warning{border-left-color:var(--warning)}
+.spot-top{display:flex; align-items:center; justify-content:space-between; gap:.5rem}
+.spot-cat{font-size:.7rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600}
+.spot-check{font-weight:600; font-size:.92rem}
+.spot-msg{color:var(--ink-2); font-size:.85rem}
+.spot-target{font-family:var(--font-mono); font-size:.75rem; color:var(--ink-muted)}
+.spot-empty{color:var(--ink-muted); font-size:.9rem}
+
+.filterbar{
+  display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; padding:.75rem 0 1.25rem;
+  border-bottom:1px solid var(--border); margin-bottom:1.75rem; font-size:.85rem; color:var(--ink-muted);
+}
+.chipbtn{
+  border:1px solid var(--border); background:var(--surface); color:var(--ink-2);
+  border-radius:999px; padding:.3rem .75rem; cursor:pointer; display:inline-flex; align-items:center; gap:.4rem;
+}
+.chipbtn .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.chipbtn[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.chipbtn[aria-pressed="true"].f-good{background:var(--good); border-color:var(--good); color:#fff}
+.chipbtn[aria-pressed="true"].f-warning{background:var(--warning); border-color:var(--warning); color:#1a1300}
+.chipbtn[aria-pressed="true"].f-critical{background:var(--critical); border-color:var(--critical); color:#fff}
+.chipbtn[aria-pressed="true"].f-skipped{background:var(--skipped); border-color:var(--skipped); color:#fff}
+
+.layout{display:grid; grid-template-columns:200px 1fr; gap:2.5rem; align-items:start}
+nav.cats{position:sticky; top:110px; display:flex; flex-direction:column; gap:.15rem; font-size:.85rem}
+nav.cats a{
+  color:var(--ink-2); text-decoration:none; padding:.35rem .6rem; border-radius:6px; border-left:2px solid transparent;
+}
+nav.cats a:hover{background:var(--surface-2)}
+nav.cats a .c{float:right; color:var(--ink-muted); font-variant-numeric:tabular-nums; font-family:var(--font-mono); font-size:.78rem}
+
+section.category{margin-bottom:2.25rem; scroll-margin-top:110px}
+.cat-head{display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.6rem}
+.cat-head h2{font-family:var(--font-display); font-size:1.15rem; margin:0; font-weight:600}
+.proportion{display:flex; gap:2px; height:6px; border-radius:3px; overflow:hidden; margin-top:.5rem; background:var(--grid)}
+.proportion i{display:block; height:100%}
+.proportion .p-good{background:var(--good)}
+.proportion .p-warning{background:var(--warning)}
+.proportion .p-critical{background:var(--critical)}
+.proportion .p-skipped{background:var(--skipped)}
+
+.tablewrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:.85rem; min-width:720px}
+thead th{
+  text-align:left; padding:.55rem .8rem; background:var(--surface-2); color:var(--ink-muted);
+  font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; font-weight:600;
+  border-bottom:1px solid var(--border); position:sticky; top:0;
+}
+tbody td{padding:.6rem .8rem; border-bottom:1px solid var(--grid); vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{border-left:3px solid transparent}
+tbody tr.st-Healthy{border-left-color:var(--good)}
+tbody tr.st-Warning{border-left-color:var(--warning)}
+tbody tr.st-Critical{border-left-color:var(--critical)}
+tbody tr.st-Skipped{border-left-color:var(--skipped)}
+tbody tr.is-hidden{display:none}
+td.target, td.check{font-family:var(--font-mono); font-size:.8rem; white-space:nowrap}
+td.msg{color:var(--ink-2); max-width:340px}
+td.rec{color:var(--ink-muted); max-width:320px; font-size:.8rem}
+
+.chip{display:inline-flex; align-items:center; gap:.35rem; font-size:.78rem; font-weight:600; white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%}
+.st-healthy .dot{background:var(--good)}
+.st-warning .dot{background:var(--warning)}
+.st-critical .dot{background:var(--critical)}
+.st-skipped .dot{background:var(--skipped)}
+.st-healthy{color:var(--good)}
+.st-warning{color:#9a6b00}
+.st-critical{color:var(--critical)}
+.st-skipped{color:var(--ink-muted)}
+:root[data-theme="dark"] .st-warning, @media (prefers-color-scheme:dark){.st-warning{color:var(--warning)}}
+
+footer.rpt{color:var(--ink-muted); font-size:.8rem; padding-top:2rem; border-top:1px solid var(--border); margin-top:1rem}
+
+@media (max-width:820px){
+  .layout{grid-template-columns:1fr}
+  nav.cats{position:static; flex-direction:row; flex-wrap:wrap; top:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .gauge .fill{transition:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="row">
+    <div class="masthead">
+      <h1>Enterprise Active Directory Health Assessment</h1>
+      <div class="meta"><b>fabrikam.com</b> &middot; generated 29 jul 2026, 05:14</div>
+    </div>
+    <button id="theme-toggle" class="theme-toggle" type="button">Dark mode</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="gauge">
+      <svg width="132" height="132" viewBox="0 0 132 132">
+        <circle class="track" cx="66" cy="66" r="54"></circle>
+        <circle class="fill" cx="66" cy="66" r="54"
+          stroke-dasharray="339.29" stroke-dashoffset="81.43"></circle>
+      </svg>
+      <div class="label">
+        <div class="num">76</div>
+        <div class="of">of 100 &middot; Needs attention</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="n">12</div><div class="l">Domain Controllers</div></div>
+      <div class="stat"><div class="n"></div><div class="l">Domains</div></div>
+      <div class="stat"><div class="n"></div><div class="l">Global Catalogs</div></div>
+      <div class="stat good"><div class="n">117</div><div class="l">Healthy</div></div>
+      <div class="stat warning"><div class="n">24</div><div class="l">Warning</div></div>
+      <div class="stat critical"><div class="n">8</div><div class="l">Critical</div></div>
+    </div>
+  </div>
+
+  <section class="dashboard" aria-label="Health by category">
+    <h2 class="section-title">Health by Category</h2>
+    <div class="dash-grid">
+          <a class="dash-card" href="#cat-DNS">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="176.25 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-critical" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="31.1 207.35" stroke-dashoffset="-176.25"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">85%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">DNS</div>
+      <div class="dash-count">41/48 &middot; <b class="crit">2 critical</b></div>
+    </a>
+    <a class="dash-card" href="#cat-EventLog">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="159.66 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-critical" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="47.69 207.35" stroke-dashoffset="-159.66"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">77%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">EventLog</div>
+      <div class="dash-count">10/13 &middot; <b class="crit">1 critical</b></div>
+    </a>
+    <a class="dash-card" href="#cat-GroupPolicy">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="176.25 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-warning" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="31.1 207.35" stroke-dashoffset="-176.25"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">85%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">GroupPolicy</div>
+      <div class="dash-count">11/13 &middot; <b class="warn">2 to review</b></div>
+    </a>
+    <a class="dash-card" href="#cat-MigrationReadiness">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="89.16 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-warning" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="118.19 207.35" stroke-dashoffset="-89.16"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">43%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">MigrationReadiness</div>
+      <div class="dash-count">3/7 &middot; <b class="warn">3 to review</b></div>
+    </a>
+    <a class="dash-card" href="#cat-Replication">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="170.03 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-critical" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="37.32 207.35" stroke-dashoffset="-170.03"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">82%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">Replication</div>
+      <div class="dash-count">9/11 &middot; <b class="crit">1 critical</b></div>
+    </a>
+    <a class="dash-card" href="#cat-Security">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="143.07 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-critical" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="64.28 207.35" stroke-dashoffset="-143.07"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">69%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">Security</div>
+      <div class="dash-count">9/13 &middot; <b class="crit">2 critical</b></div>
+    </a>
+    <a class="dash-card" href="#cat-ServerConfig">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="0 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-critical" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="207.35 207.35" stroke-dashoffset="-0"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">0%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">ServerConfig</div>
+      <div class="dash-count">0/14 &middot; <b class="crit">1 critical</b></div>
+    </a>
+    <a class="dash-card" href="#cat-SYSVOL">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="167.95 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-critical" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="39.4 207.35" stroke-dashoffset="-167.95"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">81%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">SYSVOL</div>
+      <div class="dash-count">13/16 &middot; <b class="crit">1 critical</b></div>
+    </a>
+    <a class="dash-card" href="#cat-Time">
+      <div class="dash-donut">
+        <svg width="92" height="92" viewBox="0 0 92 92" class="donut-svg">
+  <circle class="donut-track" cx="46" cy="46" r="33" stroke-width="10"></circle>
+  <circle class="donut-arc rev-good" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="182.47 207.35" stroke-dashoffset="0"></circle>
+  <circle class="donut-arc rev-warning" cx="46" cy="46" r="33" stroke-width="10"
+    stroke-dasharray="24.88 207.35" stroke-dashoffset="-182.47"></circle>
+</svg>
+        <div class="dash-label"><span class="dash-pct">88%</span><span class="dash-sub">Healthy</span></div>
+      </div>
+      <div class="dash-name">Time</div>
+      <div class="dash-count">21/24 &middot; <b class="warn">1 to review</b></div>
+    </a>
+    </div>
+  </section>
+
+  <section class="spotlight" aria-label="Key findings">
+    <h2 class="section-title">Key Findings</h2>
+    <div class="spot-grid">
+          <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">DNS</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">DNS Service</div>
+      <div class="spot-msg">Service unreachable: RPC server is unavailable.</div>
+      <div class="spot-target">DCBR23.branches.fabrikam.com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">DNS</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">Hostname Resolution</div>
+      <div class="spot-msg">Unable to resolve hostname from a remote DC.</div>
+      <div class="spot-target">DCBR23.branches.fabrikam.com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">EventLog</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">Directory Service Log (last 24h)</div>
+      <div class="spot-msg">14 Error events (Event ID 1925 - NTDS Replication) in the last 24 hours.</div>
+      <div class="spot-target">DCBR23.branches.fabrikam.com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">Replication</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">Replication Partner</div>
+      <div class="spot-msg">Replication failed. Error code: 1722</div>
+      <div class="spot-target">DCBR23.branches.fabrikam.com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">Security</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">Kerberos Pre-Authentication</div>
+      <div class="spot-msg">Account does not require Kerberos pre-authentication (AS-REP roasting exposure).</div>
+      <div class="spot-target">CN=svc-legacy-backup,...,DC=fabrikam,DC=com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">Security</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">SMBv1 Protocol</div>
+      <div class="spot-msg">SMBv1 protocol is still enabled.</div>
+      <div class="spot-target">DCBR22.branches.fabrikam.com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">ServerConfig</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">System Drive Free Space</div>
+      <div class="spot-msg">Only 6% free space on C:\\ (NTDS/logs volume).</div>
+      <div class="spot-target">DCTRE20.treasury.fabrikam.com</div>
+    </div>
+    <div class="spot-card spot-Critical">
+      <div class="spot-top">
+        <span class="spot-cat">SYSVOL</span>
+        <span class="chip st-critical"><i class="dot"></i>Critical</span>
+      </div>
+      <div class="spot-check">SYSVOL Share Accessibility</div>
+      <div class="spot-msg">Unable to access \\\\DCBR23.branches.fabrikam.com\\SYSVOL.</div>
+      <div class="spot-target">DCBR23.branches.fabrikam.com</div>
+    </div>
+    </div>
+  </section>
+
+  <div class="filterbar">
+    Filter findings:
+    <button class="chipbtn" data-filter="All" aria-pressed="true" type="button"><i class="dot"></i>All</button>
+    <button class="chipbtn f-good" data-filter="Healthy" aria-pressed="false" type="button"><i class="dot"></i>Healthy</button>
+    <button class="chipbtn f-warning" data-filter="Warning" aria-pressed="false" type="button"><i class="dot"></i>Warning</button>
+    <button class="chipbtn f-critical" data-filter="Critical" aria-pressed="false" type="button"><i class="dot"></i>Critical</button>
+    <button class="chipbtn f-skipped" data-filter="Skipped" aria-pressed="false" type="button"><i class="dot"></i>Skipped</button>
+  </div>
+
+  <div class="layout">
+    <nav class="cats">
+      <a href="#cat-Inventory">Inventory <span class="c">12</span></a>
+      <a href="#cat-DNS">DNS <span class="c">48</span></a>
+<a href="#cat-EventLog">EventLog <span class="c">13</span></a>
+<a href="#cat-GroupPolicy">GroupPolicy <span class="c">13</span></a>
+<a href="#cat-MigrationReadiness">MigrationReadiness <span class="c">7</span></a>
+<a href="#cat-Replication">Replication <span class="c">11</span></a>
+<a href="#cat-Security">Security <span class="c">13</span></a>
+<a href="#cat-ServerConfig">ServerConfig <span class="c">14</span></a>
+<a href="#cat-SYSVOL">SYSVOL <span class="c">16</span></a>
+<a href="#cat-Time">Time <span class="c">24</span></a>
+    </nav>
+
+    <main>
+      <section class="category" id="cat-Inventory">
+        <div class="cat-head"><h2>Domain Controllers by Operating System</h2></div>
+        <div class="tablewrap">
+        <table>
+          <thead><tr><th>Operating System</th><th>Count</th><th>Share</th></tr></thead>
+          <tbody>
+            <tr><td class="check">Windows Server 2016 Standard</td><td class="target">12</td><td class="rec">100%</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+          <section class="category" id="cat-DNS">
+        <div class="cat-head">
+            <h2>DNS</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">41 healthy &middot; 1 warning &middot; 2 critical &middot; 4 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:85.42%"></i><i class="p-warning" style="flex-basis:2.08%"></i><i class="p-critical" style="flex-basis:4.17%"></i><i class="p-skipped" style="flex-basis:8.33%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Critical" data-status="Critical">
+            <td class="check">DNS Service</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">Service unreachable: RPC server is unavailable.</td>
+            <td class="rec">Consistent with the open replication issue on this DC. Verify network path, Windows Firewall rules and the DNS Server service on DCBR23 before it is retired.</td>
+        </tr>
+        <tr class="st-Critical" data-status="Critical">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">Unable to resolve hostname from a remote DC.</td>
+            <td class="rec">Investigate DNS zone replication scope (AD-integrated) for branches.fabrikam.com.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved but returned a stale record for this host.</td>
+            <td class="rec">Force a re-registration with ipconfig /registerdns once connectivity is restored.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">DNS Service</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Kerberos SRV Record</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_kerberos._tcp resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">LDAP SRV Record</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">_ldap._tcp.dc._msdcs resolved.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Hostname Resolution</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Hostname resolved successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">DNS Service</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-EventLog">
+        <div class="cat-head">
+            <h2>EventLog</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">10 healthy &middot; 1 warning &middot; 1 critical &middot; 1 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:76.92%"></i><i class="p-warning" style="flex-basis:7.69%"></i><i class="p-critical" style="flex-basis:7.69%"></i><i class="p-skipped" style="flex-basis:7.69%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Critical" data-status="Critical">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">14 Error events (Event ID 1925 - NTDS Replication) in the last 24 hours.</td>
+            <td class="rec">Correlates with the open replication failure on this DC. Resolve connectivity before it generates further Directory Service errors.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">DFS Replication Log (last 24h)</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">3 Warning events (Event ID 2213 - Backlog threshold) in the last 24 hours.</td>
+            <td class="rec">Expected while the underlying replication issue is unresolved; re-check after remediation.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Directory Service Log (last 24h)</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Critical or Error events found.</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-GroupPolicy">
+        <div class="cat-head">
+            <h2>GroupPolicy</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">11 healthy &middot; 2 warning &middot; 0 critical &middot; 0 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:84.62%"></i><i class="p-warning" style="flex-basis:15.38%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Warning" data-status="Warning">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Branch Printer Deployment (branches.fabrikam.com)</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">AD version (24) is ahead of SYSVOL version (21) - pending replication.</td>
+            <td class="rec">Confirm SYSVOL replication is not backlogged on branches.fabrikam.com; recheck after the FRS/DFSR migration is completed.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Orphaned GPO</td>
+            <td class="target">Old Terminal Services GPO 2011 (branches.fabrikam.com)</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">GPO exists in SYSVOL and Active Directory but is not linked to any OU, domain or site.</td>
+            <td class="rec">Review with the branches team; remove if obsolete to reduce SYSVOL replication overhead and simplify the 2022 cutover.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Corp Password Policy (fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Controllers Policy (branches.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Controllers Policy (fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Controllers Policy (retail.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Controllers Policy (treasury.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Policy (branches.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Policy (fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Policy (retail.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Default Domain Policy (treasury.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Retail POS Lockdown (retail.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">GPO Version Consistency</td>
+            <td class="target">Treasury Workstation Hardening (treasury.fabrikam.com)</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SYSVOL version matches Active Directory version.</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-MigrationReadiness">
+        <div class="cat-head">
+            <h2>MigrationReadiness</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">3 healthy &middot; 3 warning &middot; 0 critical &middot; 1 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:42.86%"></i><i class="p-warning" style="flex-basis:42.86%"></i><i class="p-skipped" style="flex-basis:14.29%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Warning" data-status="Warning">
+            <td class="check">FRS to DFSR SYSVOL Migration</td>
+            <td class="target">branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">dfsrmig migration state is &#39;Prepared&#39;, not &#39;Eliminated&#39;.</td>
+            <td class="rec">Complete the FRS to DFSR migration on this domain before promoting a Windows Server 2022 Domain Controller into it.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Additional Server Roles on DCs</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Active Directory Certificate Services (Enterprise CA) is co-located on this Domain Controller.</td>
+            <td class="rec">Plan a dedicated CA migration (do not decommission this DC until the CA role is moved or a new CA is issued and the old one is retired following Microsoft&#39;s CA migration guidance).</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Schema Version</td>
+            <td class="target">fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Schema objectVersion 87 detected. Windows Server 2022 requires 88.</td>
+            <td class="rec">Run adprep /forestprep and adprep /domainprep /gpprep from Windows Server 2022 installation media (as Schema Admins/Enterprise Admins) before introducing the first 2022 Domain Controller.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">RODC Readiness</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online; confirm the RODC replica-source and Password Replication Policy before its Windows Server 2022 replacement is staged.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Additional Server Roles on DCs</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No additional server roles detected (DHCP, ADCS, NPS) beyond AD DS/DNS.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Forest/Domain Functional Level</td>
+            <td class="target">fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Forest and all domains are at the Windows Server 2016 functional level.</td>
+            <td class="rec">Functional level already meets the minimum for Windows Server 2022 DCs; no forest/domain level raise required before migration.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Legacy OS Domain Controllers</td>
+            <td class="target">Forest: fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">No Windows Server 2008 / 2008 R2 Domain Controllers found.</td>
+            <td class="rec">None. Windows Server 2022 blocks promotion into a domain that still has 2008/2008 R2 Domain Controllers, so this is not a blocker here.</td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-Replication">
+        <div class="cat-head">
+            <h2>Replication</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">9 healthy &middot; 1 warning &middot; 1 critical &middot; 0 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:81.82%"></i><i class="p-warning" style="flex-basis:9.09%"></i><i class="p-critical" style="flex-basis:9.09%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Critical" data-status="Critical">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">Replication failed. Error code: 1722</td>
+            <td class="rec">Investigate Active Directory replication for this partner. RPC server unavailable - check network path and firewall rules to Hub-Central.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Domain Controller Reachability</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Unable to retrieve replication metadata.</td>
+            <td class="rec">Verify connectivity, AD Web Services and Domain Controller availability. DC was intentionally offline for maintenance during this assessment window.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Replication Partner</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Replication completed successfully.</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-Security">
+        <div class="cat-head">
+            <h2>Security</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">9 healthy &middot; 2 warning &middot; 2 critical &middot; 0 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:69.23%"></i><i class="p-warning" style="flex-basis:15.38%"></i><i class="p-critical" style="flex-basis:15.38%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Critical" data-status="Critical">
+            <td class="check">Kerberos Pre-Authentication</td>
+            <td class="target">CN=svc-legacy-backup,...,DC=fabrikam,DC=com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">Account does not require Kerberos pre-authentication (AS-REP roasting exposure).</td>
+            <td class="rec">Enable Kerberos pre-authentication for this account or replace it with a group Managed Service Account (gMSA).</td>
+        </tr>
+        <tr class="st-Critical" data-status="Critical">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">SMBv1 protocol is still enabled.</td>
+            <td class="rec">Disable the FS-SMB1 Windows feature. SMBv1 is a known attack vector (WannaCry/EternalBlue) and must be removed before migrating this branch DC.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Privileged Account Hygiene</td>
+            <td class="target">CN=Domain Admins,CN=Users,DC=fabrikam,DC=com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">2 accounts in Domain Admins have PasswordNeverExpires enabled.</td>
+            <td class="rec">Review svc-legacy-backup and jdoe-adm accounts; rotate passwords and enable expiration or move service accounts to gMSA.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">LAPS Deployment</td>
+            <td class="target">Forest: fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">The ms-Mcs-AdmPwd schema attribute was not found.</td>
+            <td class="rec">LAPS is not deployed. Deploy Local Administrator Password Solution before decommissioning legacy DCs to avoid re-using shared local admin passwords on new 2022 servers.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SMBv1 Protocol</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">SMBv1 is disabled.</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-ServerConfig">
+        <div class="cat-head">
+            <h2>ServerConfig</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">0 healthy &middot; 12 warning &middot; 1 critical &middot; 1 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-warning" style="flex-basis:85.71%"></i><i class="p-critical" style="flex-basis:7.14%"></i><i class="p-skipped" style="flex-basis:7.14%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Critical" data-status="Critical">
+            <td class="check">System Drive Free Space</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">Only 6% free space on C:\\ (NTDS/logs volume).</td>
+            <td class="rec">Free up disk space or extend the volume immediately; low disk space risks database corruption and prevents safe DIT maintenance during migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">System Drive Free Space</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">18% free space on C:\\.</td>
+            <td class="rec">Monitor and plan cleanup before promoting this branch&#39;s replacement Windows Server 2022 DC.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Windows Server 2016 Standard - eligible for in-place retirement.</td>
+            <td class="rec">Schedule replacement with a Windows Server 2022 Domain Controller as part of this migration.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">Operating System Version</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-SYSVOL">
+        <div class="cat-head">
+            <h2>SYSVOL</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">13 healthy &middot; 1 warning &middot; 1 critical &middot; 1 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:81.25%"></i><i class="p-warning" style="flex-basis:6.25%"></i><i class="p-critical" style="flex-basis:6.25%"></i><i class="p-skipped" style="flex-basis:6.25%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Critical" data-status="Critical">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-critical"><i class="dot"></i>Critical</span></td>
+            <td class="msg">Unable to access \\\\DCBR23.branches.fabrikam.com\\SYSVOL.</td>
+            <td class="rec">Consistent with the open replication and DNS issues on this DC. Restore connectivity before relying on this DC for logon scripts or GPO delivery.</td>
+        </tr>
+        <tr class="st-Warning" data-status="Warning">
+            <td class="check">SYSVOL Replication Technology</td>
+            <td class="target">branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">dfsrmig migration state: Prepared. FRS is still active as a fallback replication engine for SYSVOL.</td>
+            <td class="rec">Complete the FRS to DFSR migration (dfsrmig /setglobalstate 3) on branches.fabrikam.com before introducing Windows Server 2022 Domain Controllers. Windows Server 2022 does not support FRS.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCBR20.branches.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCBR21.branches.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCBR22.branches.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCFAB20.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCFAB21.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCRET20.retail.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCRET21.retail.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCRET22.retail.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCTRE20.treasury.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Share Accessibility</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">\\\\DCTRE21.treasury.fabrikam.com\\SYSVOL is accessible.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Replication Technology</td>
+            <td class="target">fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">dfsrmig migration state: Eliminated. SYSVOL is fully migrated to DFSR.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Replication Technology</td>
+            <td class="target">retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">dfsrmig migration state: Eliminated. SYSVOL is fully migrated to DFSR.</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">SYSVOL Replication Technology</td>
+            <td class="target">treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">dfsrmig migration state: Eliminated. SYSVOL is fully migrated to DFSR.</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    <section class="category" id="cat-Time">
+        <div class="cat-head">
+            <h2>Time</h2>
+            <span style="color:var(--ink-muted);font-size:.8rem">21 healthy &middot; 1 warning &middot; 0 critical &middot; 2 skipped</span>
+        </div>
+        <div class="proportion"><i class="p-good" style="flex-basis:87.5%"></i><i class="p-warning" style="flex-basis:4.17%"></i><i class="p-skipped" style="flex-basis:8.33%"></i></div>
+        <div class="tablewrap" style="margin-top:.75rem">
+        <table>
+            <thead>
+                <tr><th>Check</th><th>Target</th><th>Status</th><th>Message</th><th>Recommendation</th></tr>
+            </thead>
+            <tbody>
+                        <tr class="st-Warning" data-status="Warning">
+            <td class="check">Time Source</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-warning"><i class="dot"></i>Warning</span></td>
+            <td class="msg">Phase offset exceeds 2 seconds against DCBR20.branches.fabrikam.com.</td>
+            <td class="rec">Check network latency/packet loss to Hub-Central and confirm w32time poll interval; consistent with the open replication issue on this DC.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">Time Source</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Skipped" data-status="Skipped">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCBR24.branches.fabrikam.com</td>
+            <td><span class="chip st-skipped"><i class="dot"></i>Skipped</span></td>
+            <td class="msg">DC intentionally offline for maintenance during this assessment window.</td>
+            <td class="rec">Re-run this check once DCBR24 is back online.</td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCFAB20.fabrikam.com (domain hierarchy)</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCBR20.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCBR20.branches.fabrikam.com</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCBR21.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCBR20.branches.fabrikam.com</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCBR22.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCBR23.branches.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCFAB20.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: Local CMOS Clock (Forest Root PDC)</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCFAB20.fabrikam.com</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCFAB21.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCFAB20.fabrikam.com (domain hierarchy)</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCRET20.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCRET20.retail.fabrikam.com</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCRET21.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCRET20.retail.fabrikam.com</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCRET22.retail.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCTRE20.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCFAB20.fabrikam.com (domain hierarchy)</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Windows Time Service</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Service Status: Running</td>
+            <td class="rec"></td>
+        </tr>
+        <tr class="st-Healthy" data-status="Healthy">
+            <td class="check">Time Source</td>
+            <td class="target">DCTRE21.treasury.fabrikam.com</td>
+            <td><span class="chip st-healthy"><i class="dot"></i>Healthy</span></td>
+            <td class="msg">Source: DCTRE20.treasury.fabrikam.com</td>
+            <td class="rec"></td>
+        </tr>
+            </tbody>
+        </table>
+        </div>
+    </section>
+    </main>
+  </div>
+
+  <footer class="rpt">
+    Enterprise Active Directory Health Assessment Toolkit &middot; Walter Campal
+  </footer>
+</div>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var stored = localStorage.getItem('adehat-theme');
+  if (stored) { root.setAttribute('data-theme', stored); }
+  var toggle = document.getElementById('theme-toggle');
+  function current(){
+    var attr = root.getAttribute('data-theme');
+    if (attr) return attr;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function paint(){ toggle.textContent = current() === 'dark' ? 'Light mode' : 'Dark mode'; }
+  paint();
+  toggle.addEventListener('click', function(){
+    var next = current() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('adehat-theme', next);
+    paint();
+  });
+
+  var rows = Array.prototype.slice.call(document.querySelectorAll('tbody tr[data-status]'));
+  var buttons = Array.prototype.slice.call(document.querySelectorAll('.chipbtn'));
+  var active = 'All';
+
+  function applyFilter(){
+    rows.forEach(function(r){
+      var show = active === 'All' || r.getAttribute('data-status') === active;
+      r.classList.toggle('is-hidden', !show);
+    });
+    buttons.forEach(function(b){ b.setAttribute('aria-pressed', b.dataset.filter === active ? 'true' : 'false'); });
+  }
+
+  buttons.forEach(function(b){
+    b.addEventListener('click', function(){ active = b.dataset.filter; applyFilter(); });
+  });
+  applyFilter();
+})();
+</script>
+</body>
+</html>

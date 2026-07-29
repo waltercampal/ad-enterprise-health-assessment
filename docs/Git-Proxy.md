@@ -10,9 +10,11 @@ git config --global --get https.proxy
 ## Configure
 
 ```powershell
-git config --global http.proxy http://192.168.113.13:8080
-git config --global https.proxy http://192.168.113.13:8080
+git config --global http.proxy http://10.10.10.10:8080
+git config --global https.proxy http://10.10.10.10:8080
 ```
+
+Replace `10.10.10.10:8080` with your organization's actual proxy address.
 
 ## Test
 

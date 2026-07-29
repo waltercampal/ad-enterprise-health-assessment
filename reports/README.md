@@ -18,3 +18,9 @@ building new Health modules, without needing a live Active Directory
 environment.
 
 Do not replace the files in `reports/samples/` with real data.
+
+[`reports/samples/AssessmentReport.html`](samples/AssessmentReport.html) is the
+visual dashboard produced from that same fictional data. GitHub only shows its
+raw source in the file browser (it doesn't render HTML files) — to view it
+rendered, download it and open locally, or paste the raw file URL into
+[htmlpreview.github.io](https://htmlpreview.github.io/).
