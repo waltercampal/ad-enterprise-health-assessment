@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Enterprise AD Health Assessment Toolkit</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f9f9f7; --surface:#fcfcfb;
+  --ink:#0b0b0b; --ink-2:#52514e; --ink-muted:#898781;
+  --border:rgba(11,11,11,.10);
+  --accent:#2a78d6; --accent-ink:#ffffff;
+  --font-display:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --font-body:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-mono:"SF Mono","Cascadia Code",Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --bg:#0d0d0d; --surface:#1a1a19;
+    --ink:#ffffff; --ink-2:#c3c2b7; --ink-muted:#898781;
+    --border:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-ink:#0b0b0b;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0d0d0d; --surface:#1a1a19;
+  --ink:#ffffff; --ink-2:#c3c2b7; --ink-muted:#898781;
+  --border:rgba(255,255,255,.10);
+  --accent:#3987e5; --accent-ink:#0b0b0b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px; margin:0 auto; padding:4.5rem 1.5rem 5rem}
+.eyebrow{
+  font-size:.78rem; color:var(--ink-muted); text-transform:uppercase; letter-spacing:.08em;
+  font-weight:600; margin:0 0 .75rem;
+}
+h1{
+  font-family:var(--font-display); font-size:2.1rem; font-weight:600; line-height:1.2;
+  margin:0 0 1rem; text-wrap:balance;
+}
+p.lede{color:var(--ink-2); font-size:1.05rem; line-height:1.6; max-width:60ch; margin:0 0 2.5rem}
+.cards{display:grid; gap:.85rem}
+a.card{
+  display:flex; flex-direction:column; gap:.3rem; background:var(--surface); border:1px solid var(--border);
+  border-radius:12px; padding:1.1rem 1.3rem; text-decoration:none; color:inherit;
+  transition:transform .15s ease, border-color .15s ease;
+}
+a.card:hover{transform:translateY(-2px); border-color:var(--accent)}
+a.card:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.card .t{font-weight:600; font-size:1.02rem}
+.card .d{color:var(--ink-muted); font-size:.88rem}
+.card .arrow{margin-left:auto; color:var(--accent); font-family:var(--font-mono)}
+.card .row{display:flex; align-items:center; gap:.5rem}
+footer{color:var(--ink-muted); font-size:.8rem; margin-top:3rem; border-top:1px solid var(--border); padding-top:1.5rem}
+footer code{font-family:var(--font-mono); font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Walter Campal &middot; Horizon Labs</p>
+  <h1>Enterprise Active Directory<br>Health Assessment Toolkit</h1>
+  <p class="lede">
+    A PowerShell toolkit that audits an Active Directory forest across
+    replication, DNS, time sync, SYSVOL, GPOs, security baseline and
+    migration readiness &mdash; built while planning a real
+    Windows Server 2016&nbsp;&rarr;&nbsp;2022 migration. Everything below
+    uses a fictional sample forest (<code style="font-family:var(--font-mono)">fabrikam.com</code>).
+  </p>
+
+  <div class="cards">
+    <a class="card" href="reports/samples/AssessmentReport.html">
+      <div class="row"><span class="t">Live Dashboard Demo</span><span class="arrow">&rarr;</span></div>
+      <div class="d">The generated HTML report: score gauge, health-by-category donuts, and key findings spotlight.</div>
+    </a>
+    <a class="card" href="https://github.com/waltercampal/ad-enterprise-health-assessment/blob/feature/ws2022-case-study/docs/CaseStudies/Enterprise-AD-WS2022-Migration/README.md">
+      <div class="row"><span class="t">Migration Case Study</span><span class="arrow">&rarr;</span></div>
+      <div class="d">Discovery through post-migration validation, written up end to end.</div>
+    </a>
+    <a class="card" href="https://github.com/waltercampal/ad-enterprise-health-assessment">
+      <div class="row"><span class="t">Source Code</span><span class="arrow">&rarr;</span></div>
+      <div class="d">Full toolkit: Discovery scripts, Health modules, and the reporting layer.</div>
+    </a>
+  </div>
+
+  <footer>
+    Static site served from the <code>feature/ws2022-case-study</code> branch via GitHub Pages.
+  </footer>
+</div>
+</body>
+</html>
