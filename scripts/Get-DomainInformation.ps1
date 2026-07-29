@@ -10,19 +10,27 @@
     0.3.1
 #>
 
+param(
+    [System.Management.Automation.PSCredential]$Credential
+)
+
 Import-Module ActiveDirectory
 
-$Forest = Get-ADForest
+$CredSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
+
+$Forest = Get-ADForest @CredSplat
 
 $DomainInfo = foreach ($DomainName in $Forest.Domains)
 {
     $Domain = Get-ADDomain `
         -Identity $DomainName `
-        -Server $DomainName
+        -Server $DomainName `
+        @CredSplat
 
     $DCCount = (Get-ADDomainController `
         -Server $DomainName `
-        -Filter *).Count
+        -Filter * `
+        @CredSplat).Count
 
     [PSCustomObject]@{
 

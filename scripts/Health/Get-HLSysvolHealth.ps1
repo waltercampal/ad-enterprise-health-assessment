@@ -16,10 +16,13 @@ function Get-HLSysvolHealth {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [array]$DomainControllers
+        [array]$DomainControllers,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
+    $CmdSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
 
     #--------------------------------------------------
     # FRS -> DFSR migration state (one check per domain)
@@ -35,7 +38,7 @@ function Get-HLSysvolHealth {
         Write-Verbose "Checking SYSVOL replication technology for $Domain via $($ProbeDC.HostName)"
 
         try {
-            $MigrationState = Invoke-Command -ComputerName $ProbeDC.HostName {
+            $MigrationState = Invoke-Command -ComputerName $ProbeDC.HostName @CmdSplat {
                 dfsrmig /getglobalstate
             } -ErrorAction Stop
 
@@ -84,7 +87,19 @@ function Get-HLSysvolHealth {
         $SysvolPath = "\\$($DC.HostName)\SYSVOL"
 
         try {
-            if (Test-Path -Path $SysvolPath -ErrorAction Stop) {
+            $IsAccessible = $false
+
+            if ($Credential) {
+                $DriveName = "ADEHAT_$([guid]::NewGuid().ToString('N').Substring(0,8))"
+                $Drive = New-PSDrive -Name $DriveName -PSProvider FileSystem -Root $SysvolPath -Credential $Credential -ErrorAction Stop
+                $IsAccessible = $true
+                Remove-PSDrive -Name $DriveName -Force -ErrorAction SilentlyContinue
+            }
+            else {
+                $IsAccessible = Test-Path -Path $SysvolPath -ErrorAction Stop
+            }
+
+            if ($IsAccessible) {
                 $Results += New-HealthResult `
                     -Category "SYSVOL" `
                     -Check "SYSVOL Share Accessibility" `

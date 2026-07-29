@@ -31,7 +31,7 @@ for that phase.
 | Transfer Schema Master, Domain Naming Master | Not Started | | AD team | |
 | Transfer fabrikam.com PDC/RID/Infrastructure Master | Not Started | | AD team | |
 | 48-hour soak period | Not Started | | AD team | |
-| Run full toolkit assessment; compare Infrastructure Score | Not Started | | AD team | Must not regress below 82/100 baseline. |
+| Run full toolkit assessment; compare Infrastructure Score | Not Started | | AD team | Must not regress below 76/100 baseline. |
 | Demote DCFAB20, DCFAB21 | Not Started | | AD team | |
 | Go/no-go checkpoint for Phase 2 | Not Started | | Project lead | |
 
@@ -48,7 +48,7 @@ above - useful for audits and post-incident review.
 
 | Date | Action | Owner | Result |
 |---|---|---|---|
-| 2026-07-27 | Ran full toolkit assessment (Discovery + Health) - established baseline | AD team | Infrastructure Score 82/100; 10 findings logged - see [02 - Health Assessment](02-HealthAssessment.md). |
+| 2026-07-27 | Ran full toolkit assessment (Discovery + Health) - established baseline | AD team | Infrastructure Score 76/100; 11 findings logged - see [02 - Health Assessment](02-HealthAssessment.md). |
 | 2026-07-28 | Disabled SMBv1 on DCBR22 | AD team | Confirmed via re-run of `Get-HLSecurityBaseline`. |
 | 2026-07-28 | Replaced `svc-legacy-backup` with a gMSA | Security team | Old account disabled, not yet deleted (30-day retention before removal). |
 | 2026-07-29 | Opened network ticket for DCBR23 replication failure | Network team | Root cause suspected: firewall rule change at Branch-North-02 during a recent circuit migration. |

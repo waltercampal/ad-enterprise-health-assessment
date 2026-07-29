@@ -4,7 +4,7 @@ Enterprise Active Directory Assessment
 
 Assessment Date
 ---------------
-07/27/2026 16:04:27
+07/28/2026 22:39:47
 
 Forest
 ------
@@ -18,9 +18,7 @@ Domains
 Domain Controllers
 ------------------
 Total.................... 12
-Windows Server 2016...... 12
-Windows Server 2019...... 0
-Windows Server 2022...... 0
+Windows Server 2016 Standard... 12
 
 Global Catalogs
 ---------------
@@ -30,6 +28,11 @@ FSMO Roles
 ----------
 Schema Master...         DCFAB20.fabrikam.com
 Domain Naming Master...  DCFAB20.fabrikam.com
+
+branches.fabrikam.com
+   PDC Emulator...      DCBR21.branches.fabrikam.com
+   RID Master...        DCBR20.branches.fabrikam.com
+   Infrastructure Master... DCBR22.branches.fabrikam.com
 
 fabrikam.com
    PDC Emulator...      DCFAB21.fabrikam.com
@@ -46,39 +49,34 @@ treasury.fabrikam.com
    RID Master...        DCTRE20.treasury.fabrikam.com
    Infrastructure Master... DCTRE21.treasury.fabrikam.com
 
-branches.fabrikam.com
-   PDC Emulator...      DCBR21.branches.fabrikam.com
-   RID Master...        DCBR20.branches.fabrikam.com
-   Infrastructure Master... DCBR22.branches.fabrikam.com
-
 Health Summary
 --------------
-Category                  Healthy  Warning  Critical  Skipped
-Replication...............    9       1        1         0
-DNS........................   40       1        2         4
-Time.......................   11       1        0         0
-SYSVOL / DFSR..............   11       0        1         0
-Group Policy...............   17       2        0         0
-Security Baseline..........    9       3        1         0
-Server Configuration........   10       2        0         0
-Event Log...................   10       2        0         0
+Category                     Healthy  Warning  Critical  Skipped
+DNS                               41        1         2        4
+EventLog                          10        1         1        1
+GroupPolicy                       11        2         0        0
+MigrationReadiness                 3        3         0        1
+Replication                        9        1         1        0
+Security                           9        2         2        0
+ServerConfig                       0       12         1        1
+SYSVOL                            13        1         1        1
+Time                              21        1         0        2
 
 Migration Readiness (Windows Server 2016 -> 2022)
 --------------------------------------------------
-Schema Version.............. Healthy - Current schema version supports Windows Server 2022 DCs.
-Legacy OS Blockers........... None found (no Windows Server 2008/2008 R2 Domain Controllers).
-FRS -> DFSR Migration........ Complete on 3 of 4 domains. branches.fabrikam.com still requires validation.
-Additional DC Roles.......... ADCS (Certificate Authority) detected on DCTRE20.treasury.fabrikam.com. Requires a dedicated CA migration plan before decommission.
+Warning        Schema Version: Schema objectVersion 87 detected. Windows Server 2022 requires 88.
+Healthy        Legacy OS Domain Controllers: No Windows Server 2008 / 2008 R2 Domain Controllers found.
+Healthy        Forest/Domain Functional Level: Forest and all domains are at the Windows Server 2016 functional level.
+Warning        FRS to DFSR SYSVOL Migration: dfsrmig migration state is 'Prepared', not 'Eliminated'.
+Warning        Additional Server Roles on DCs: Active Directory Certificate Services (Enterprise CA) is co-located on this Domain Controller.
+Healthy        Additional Server Roles on DCs: No additional server roles detected (DHCP, ADCS, NPS) beyond AD DS/DNS.
+Skipped        RODC Readiness: DC intentionally offline for maintenance during this assessment window.
 
 Infrastructure Score
 ---------------------
-82 / 100  (Good - remediate Critical/Warning findings before starting DC promotions)
-
-Replication
------------
-Partners................ 11
-Errors.................. 1
+76 / 100  (117 healthy, 24 warning, 8 critical, 10 skipped)
 
 ==========================================
 Assessment completed successfully.
 ==========================================
+

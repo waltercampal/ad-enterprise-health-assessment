@@ -2,13 +2,38 @@
 .SYNOPSIS
     Runs the complete Enterprise Active Directory Health Assessment.
 
+.PARAMETER Credential
+    Optional alternate credential used for every AD/WinRM/CIM operation in
+    this run (Discovery and Health modules alike). If omitted, the current
+    user's session identity is used, as before.
+
+.PARAMETER CredentialPath
+    Optional path to a credential previously saved with
+    `Get-Credential | Export-Clixml -Path <path>`. Loaded via Import-Clixml
+    (DPAPI-protected - only decryptable by the same user on the same
+    machine that exported it). Ignored if -Credential is also supplied.
+
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    2.0.0
+    2.1.0
 #>
+
+param(
+    [System.Management.Automation.PSCredential]$Credential,
+    [string]$CredentialPath
+)
+
+if (-not $Credential -and $CredentialPath) {
+    if (-not (Test-Path $CredentialPath)) {
+        throw "CredentialPath '$CredentialPath' was not found."
+    }
+    $Credential = Import-Clixml -Path $CredentialPath
+}
+
+$CredSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
 
 Import-Module ActiveDirectory
 Import-Module GroupPolicy -ErrorAction SilentlyContinue
@@ -43,11 +68,22 @@ Write-Host ""
 
 Write-Step "Running Discovery modules..."
 
-$Forest  = .\scripts\Get-ForestInformation.ps1
-$Domains = .\scripts\Get-DomainInformation.ps1
-$FSMO    = .\scripts\Get-FSMORoles.ps1
-$DCs     = .\scripts\Get-DomainControllerInventory.ps1
-$Sites   = .\scripts\Get-SitesInformation.ps1
+$Forest  = .\scripts\Get-ForestInformation.ps1 @CredSplat
+
+if (-not $Forest) {
+    Write-ErrorMessage "Discovery failed: Get-ForestInformation.ps1 returned nothing. Check credentials (domain-qualified username, e.g. DOMAIN\user or user@domain) and connectivity, then re-run."
+    exit 1
+}
+
+$Domains = .\scripts\Get-DomainInformation.ps1 @CredSplat
+$FSMO    = .\scripts\Get-FSMORoles.ps1 @CredSplat
+$DCs     = .\scripts\Get-DomainControllerInventory.ps1 @CredSplat
+$Sites   = .\scripts\Get-SitesInformation.ps1 @CredSplat
+
+if (-not $DCs) {
+    Write-ErrorMessage "Discovery failed: Get-DomainControllerInventory.ps1 returned nothing. Check credentials and connectivity, then re-run."
+    exit 1
+}
 
 # ------------------------------------------------------------
 # Export Discovery
@@ -67,15 +103,15 @@ Export-AssessmentCsv -Data $Sites   -Name "SitesInformation"
 
 Write-Step "Running Health modules..."
 
-$Replication        = Get-HLReplicationHealth   -DomainControllers $DCs
-$DNSHealth           = Get-HLDNSHealth            -DomainControllers $DCs
-$TimeHealth          = Get-HLTimeHealth           -DomainControllers $DCs
-$SysvolHealth        = Get-HLSysvolHealth         -DomainControllers $DCs
+$Replication        = Get-HLReplicationHealth   -DomainControllers $DCs @CredSplat
+$DNSHealth           = Get-HLDNSHealth            -DomainControllers $DCs @CredSplat
+$TimeHealth          = Get-HLTimeHealth           -DomainControllers $DCs @CredSplat
+$SysvolHealth        = Get-HLSysvolHealth         -DomainControllers $DCs @CredSplat
 $GPOHealth           = Get-HLGPOHealth            -Domains $Domains
-$SecurityBaseline    = Get-HLSecurityBaseline      -DomainControllers $DCs -Domains $Domains
-$ServerConfig        = Get-HLServerConfig         -DomainControllers $DCs
+$SecurityBaseline    = Get-HLSecurityBaseline      -DomainControllers $DCs -Domains $Domains @CredSplat
+$ServerConfig        = Get-HLServerConfig         -DomainControllers $DCs @CredSplat
 $EventLogHealth      = Get-HLEventLogHealth       -DomainControllers $DCs
-$MigrationReadiness  = Get-HLMigrationReadiness   -Forest $Forest -DomainControllers $DCs
+$MigrationReadiness  = Get-HLMigrationReadiness   -Forest $Forest -DomainControllers $DCs @CredSplat
 
 $HealthResults = @(
     $Replication

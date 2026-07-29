@@ -7,7 +7,7 @@
     Horizon Labs
 
 .VERSION
-    1.0.0
+    1.1.0
 #>
 
 function Get-HLDNSHealth {
@@ -15,7 +15,9 @@ function Get-HLDNSHealth {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [array]$DomainControllers
+        [array]$DomainControllers,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
@@ -25,24 +27,29 @@ function Get-HLDNSHealth {
         Write-Verbose "Checking DNS health on $($DC.HostName)"
 
         #--------------------------------------------------
-        # DNS Service
+        # DNS Service (CIM - works across PowerShell versions,
+        # unlike Get-Service -ComputerName which was removed in
+        # PowerShell 7+)
         #--------------------------------------------------
 
         try {
 
-            $Service = Get-Service `
+            $Service = Get-HLCimInstance `
                 -ComputerName $DC.HostName `
-                -Name DNS `
-                -ErrorAction Stop
+                -ClassName Win32_Service `
+                -Filter "Name='DNS'" `
+                -Credential $Credential
+
+            $IsRunning = $Service.State -eq 'Running'
 
             $Results += New-HealthResult `
                 -Category "DNS" `
                 -Check "DNS Service" `
                 -Target $DC.HostName `
-                -Status $(if ($Service.Status -eq "Running") { "Healthy" } else { "Critical" }) `
-                -Severity $(if ($Service.Status -eq "Running") { "Info" } else { "High" }) `
-                -Message "Service Status: $($Service.Status)" `
-                -Recommendation $(if ($Service.Status -ne "Running") { "Start the DNS Server service on this Domain Controller and investigate why it stopped." } else { "" })
+                -Status $(if ($IsRunning) { "Healthy" } else { "Critical" }) `
+                -Severity $(if ($IsRunning) { "Info" } else { "High" }) `
+                -Message "Service Status: $($Service.State)" `
+                -Recommendation $(if (-not $IsRunning) { "Start the DNS Server service on this Domain Controller and investigate why it stopped." } else { "" })
 
         }
         catch {
@@ -51,10 +58,10 @@ function Get-HLDNSHealth {
                 -Category "DNS" `
                 -Check "DNS Service" `
                 -Target $DC.HostName `
-                -Status "Critical" `
-                -Severity "High" `
+                -Status "Warning" `
+                -Severity "Medium" `
                 -Message $_.Exception.Message `
-                -Recommendation "Verify connectivity and the DNS Server service on this Domain Controller."
+                -Recommendation "Verify connectivity/CIM access and the DNS Server service on this Domain Controller."
         }
 
         #--------------------------------------------------

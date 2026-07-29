@@ -19,10 +19,14 @@ function Get-HLSecurityBaseline {
         [array]$DomainControllers,
 
         [Parameter(Mandatory)]
-        [array]$Domains
+        [array]$Domains,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
+    $CmdSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
+    $AdSplat  = if ($Credential) { @{ Credential = $Credential } } else { @{} }
 
     #--------------------------------------------------
     # SMBv1 protocol (per Domain Controller)
@@ -33,7 +37,7 @@ function Get-HLSecurityBaseline {
         Write-Verbose "Checking SMBv1 on $($DC.HostName)"
 
         try {
-            $Smb1 = Invoke-Command -ComputerName $DC.HostName {
+            $Smb1 = Invoke-Command -ComputerName $DC.HostName @CmdSplat {
                 (Get-SmbServerConfiguration).EnableSMB1Protocol
             } -ErrorAction Stop
 
@@ -74,12 +78,13 @@ function Get-HLSecurityBaseline {
     #--------------------------------------------------
 
     try {
-        $Schema = (Get-ADRootDSE -ErrorAction Stop).schemaNamingContext
+        $Schema = (Get-ADRootDSE -ErrorAction Stop @AdSplat).schemaNamingContext
 
         $LapsAttribute = Get-ADObject `
             -SearchBase $Schema `
             -Filter { lDAPDisplayName -eq "ms-Mcs-AdmPwd" } `
-            -ErrorAction Stop
+            -ErrorAction Stop `
+            @AdSplat
 
         if ($LapsAttribute) {
             $Results += New-HealthResult `
@@ -125,9 +130,10 @@ function Get-HLSecurityBaseline {
                 -Identity "Domain Admins" `
                 -Server $Domain.DomainName `
                 -Recursive `
-                -ErrorAction Stop |
+                -ErrorAction Stop `
+                @AdSplat |
                 Where-Object { $_.objectClass -eq 'user' } |
-                Get-ADUser -Properties PasswordNeverExpires, DoesNotRequirePreAuth -Server $Domain.DomainName
+                Get-ADUser -Properties PasswordNeverExpires, DoesNotRequirePreAuth -Server $Domain.DomainName @AdSplat
 
             $NeverExpires = $DomainAdmins | Where-Object PasswordNeverExpires
 

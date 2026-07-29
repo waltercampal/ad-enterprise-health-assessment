@@ -16,7 +16,9 @@ function Get-HLServerConfig {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [array]$DomainControllers
+        [array]$DomainControllers,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
@@ -54,11 +56,11 @@ function Get-HLServerConfig {
         #--------------------------------------------------
 
         try {
-            $Disk = Get-CimInstance `
+            $Disk = Get-HLCimInstance `
                 -ComputerName $DC.HostName `
                 -ClassName Win32_LogicalDisk `
                 -Filter "DeviceID='C:'" `
-                -ErrorAction Stop
+                -Credential $Credential
 
             $FreePercent = [math]::Round(($Disk.FreeSpace / $Disk.Size) * 100)
 

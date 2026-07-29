@@ -7,7 +7,7 @@
     Horizon Labs
 
 .VERSION
-    1.0.0
+    1.1.0
 #>
 
 function Get-HLTimeHealth {
@@ -15,34 +15,42 @@ function Get-HLTimeHealth {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [array]$DomainControllers
+        [array]$DomainControllers,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
+    $CmdSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
 
     foreach ($DC in $DomainControllers) {
 
         Write-Verbose "Checking Time Service on $($DC.HostName)"
 
         #--------------------------------------------------
-        # W32Time Service
+        # W32Time Service (CIM - works across PowerShell versions,
+        # unlike Get-Service -ComputerName which was removed in
+        # PowerShell 7+)
         #--------------------------------------------------
 
         try {
 
-            $Service = Get-Service `
+            $Service = Get-HLCimInstance `
                 -ComputerName $DC.HostName `
-                -Name W32Time `
-                -ErrorAction Stop
+                -ClassName Win32_Service `
+                -Filter "Name='W32Time'" `
+                -Credential $Credential
+
+            $IsRunning = $Service.State -eq 'Running'
 
             $Results += New-HealthResult `
                 -Category "Time" `
                 -Check "Windows Time Service" `
                 -Target $DC.HostName `
-                -Status $(if ($Service.Status -eq "Running") { "Healthy" } else { "Critical" }) `
-                -Severity $(if ($Service.Status -eq "Running") { "Info" } else { "High" }) `
-                -Message "Service Status: $($Service.Status)" `
-                -Recommendation $(if ($Service.Status -ne "Running") { "Start the Windows Time Service on this Domain Controller." } else { "" })
+                -Status $(if ($IsRunning) { "Healthy" } else { "Critical" }) `
+                -Severity $(if ($IsRunning) { "Info" } else { "High" }) `
+                -Message "Service Status: $($Service.State)" `
+                -Recommendation $(if (-not $IsRunning) { "Start the Windows Time Service on this Domain Controller." } else { "" })
 
         }
         catch {
@@ -51,10 +59,10 @@ function Get-HLTimeHealth {
                 -Category "Time" `
                 -Check "Windows Time Service" `
                 -Target $DC.HostName `
-                -Status "Critical" `
-                -Severity "High" `
+                -Status "Warning" `
+                -Severity "Medium" `
                 -Message $_.Exception.Message `
-                -Recommendation "Verify connectivity and the Windows Time Service on this Domain Controller."
+                -Recommendation "Verify connectivity/CIM access to this Domain Controller."
         }
 
         #--------------------------------------------------
@@ -63,7 +71,7 @@ function Get-HLTimeHealth {
 
         try {
 
-            $Source = Invoke-Command -ComputerName $DC.HostName {
+            $Source = Invoke-Command -ComputerName $DC.HostName @CmdSplat {
                 w32tm /query /source
             } -ErrorAction Stop
 

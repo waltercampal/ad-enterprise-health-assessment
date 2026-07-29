@@ -10,14 +10,20 @@
     0.2.2
 #>
 
+param(
+    [System.Management.Automation.PSCredential]$Credential
+)
+
 Import-Module ActiveDirectory
 
+$CredSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
+
 # Retrieve all objects only once
-$AllSites = Get-ADReplicationSite -Filter *
+$AllSites = Get-ADReplicationSite -Filter * @CredSplat
 
-$AllSubnets = Get-ADReplicationSubnet -Filter *
+$AllSubnets = Get-ADReplicationSubnet -Filter * @CredSplat
 
-$AllDCs = Get-ADDomainController -Filter *
+$AllDCs = Get-ADDomainController -Filter * @CredSplat
 
 $Sites = foreach ($Site in ($AllSites | Sort-Object Name))
 {

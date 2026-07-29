@@ -10,9 +10,15 @@
     0.2.1
 #>
 
+param(
+    [System.Management.Automation.PSCredential]$Credential
+)
+
 Import-Module ActiveDirectory
 
-$Forest = Get-ADForest
+$CredSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
+
+$Forest = Get-ADForest @CredSplat
 
 $Results = @()
 
@@ -38,7 +44,8 @@ foreach ($DomainName in $Forest.Domains)
 {
     $Domain = Get-ADDomain `
         -Identity $DomainName `
-        -Server $DomainName
+        -Server $DomainName `
+        @CredSplat
 
     $Results += [PSCustomObject]@{
         Scope  = "Domain"

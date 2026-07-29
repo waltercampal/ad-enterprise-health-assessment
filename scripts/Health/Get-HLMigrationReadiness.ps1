@@ -20,10 +20,14 @@ function Get-HLMigrationReadiness {
         $Forest,
 
         [Parameter(Mandatory)]
-        [array]$DomainControllers
+        [array]$DomainControllers,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
+    $AdSplat  = if ($Credential) { @{ Credential = $Credential } } else { @{} }
+    $CmdSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
 
     # Minimum AD schema objectVersion required to introduce a Windows Server
     # 2022 Domain Controller (adprep /forestprep target).
@@ -34,19 +38,20 @@ function Get-HLMigrationReadiness {
     #--------------------------------------------------
 
     try {
-        $RootDSE = Get-ADRootDSE -Server $Forest.SchemaMaster -ErrorAction Stop
+        $RootDSE = Get-ADRootDSE -Server $Forest.SchemaMaster -ErrorAction Stop @AdSplat
 
         $SchemaVersion = (Get-ADObject `
             -Identity $RootDSE.schemaNamingContext `
             -Property objectVersion `
             -Server $Forest.SchemaMaster `
-            -ErrorAction Stop).objectVersion
+            -ErrorAction Stop `
+            @AdSplat).objectVersion
 
         if ($SchemaVersion -ge $RequiredSchemaVersion) {
             $Results += New-HealthResult `
                 -Category "MigrationReadiness" `
                 -Check "Schema Version" `
-                -Target $Forest.Name `
+                -Target $Forest.ForestName `
                 -Status Healthy `
                 -Severity Info `
                 -Message "Schema objectVersion $SchemaVersion detected. Meets the minimum required for Windows Server 2022 ($RequiredSchemaVersion)."
@@ -55,7 +60,7 @@ function Get-HLMigrationReadiness {
             $Results += New-HealthResult `
                 -Category "MigrationReadiness" `
                 -Check "Schema Version" `
-                -Target $Forest.Name `
+                -Target $Forest.ForestName `
                 -Status Warning `
                 -Severity High `
                 -Message "Schema objectVersion $SchemaVersion detected. Windows Server 2022 requires $RequiredSchemaVersion." `
@@ -66,7 +71,7 @@ function Get-HLMigrationReadiness {
         $Results += New-HealthResult `
             -Category "MigrationReadiness" `
             -Check "Schema Version" `
-            -Target $Forest.Name `
+            -Target $Forest.ForestName `
             -Status Warning `
             -Severity Medium `
             -Message $_.Exception.Message `
@@ -85,7 +90,7 @@ function Get-HLMigrationReadiness {
         $Results += New-HealthResult `
             -Category "MigrationReadiness" `
             -Check "Legacy OS Domain Controllers" `
-            -Target "Forest: $($Forest.Name)" `
+            -Target "Forest: $($Forest.ForestName)" `
             -Status Critical `
             -Severity High `
             -Message "$($LegacyDCs.Count) Domain Controller(s) still running Windows Server 2008/2008 R2: $($LegacyDCs.HostName -join ', ')." `
@@ -95,7 +100,7 @@ function Get-HLMigrationReadiness {
         $Results += New-HealthResult `
             -Category "MigrationReadiness" `
             -Check "Legacy OS Domain Controllers" `
-            -Target "Forest: $($Forest.Name)" `
+            -Target "Forest: $($Forest.ForestName)" `
             -Status Healthy `
             -Severity Info `
             -Message "No Windows Server 2008 / 2008 R2 Domain Controllers found."
@@ -108,7 +113,7 @@ function Get-HLMigrationReadiness {
     $Results += New-HealthResult `
         -Category "MigrationReadiness" `
         -Check "Forest Functional Level" `
-        -Target $Forest.Name `
+        -Target $Forest.ForestName `
         -Status Healthy `
         -Severity Info `
         -Message "Forest functional level: $($Forest.ForestMode). Already meets the minimum for Windows Server 2022 Domain Controllers (Windows Server 2008 or higher)."
@@ -124,7 +129,7 @@ function Get-HLMigrationReadiness {
         Write-Verbose "Checking co-located server roles on $($DC.HostName)"
 
         try {
-            $InstalledRoles = Invoke-Command -ComputerName $DC.HostName {
+            $InstalledRoles = Invoke-Command -ComputerName $DC.HostName @CmdSplat {
                 param($RolesOfInterest)
                 Get-WindowsFeature | Where-Object {
                     $_.Installed -and $_.Name -in $RolesOfInterest

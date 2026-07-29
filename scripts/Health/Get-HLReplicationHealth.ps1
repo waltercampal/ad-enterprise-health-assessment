@@ -15,10 +15,13 @@ function Get-HLReplicationHealth {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [array]$DomainControllers
+        [array]$DomainControllers,
+
+        [System.Management.Automation.PSCredential]$Credential
     )
 
     $Results = @()
+    $CredSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
 
     foreach ($DC in $DomainControllers) {
 
@@ -27,7 +30,8 @@ function Get-HLReplicationHealth {
         try {
             $ReplicationMetadata = Get-ADReplicationPartnerMetadata `
                 -Target $DC.HostName `
-                -ErrorAction Stop
+                -ErrorAction Stop `
+                @CredSplat
 
             foreach ($Partner in $ReplicationMetadata) {
 

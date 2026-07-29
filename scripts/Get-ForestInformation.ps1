@@ -11,9 +11,15 @@
 #>
 
 
+param(
+    [System.Management.Automation.PSCredential]$Credential
+)
+
 Import-Module ActiveDirectory
 
-$Forest = Get-ADForest
+$CredSplat = if ($Credential) { @{ Credential = $Credential } } else { @{} }
+
+$Forest = Get-ADForest @CredSplat
 
 $ForestInfo = [PSCustomObject]@{
 

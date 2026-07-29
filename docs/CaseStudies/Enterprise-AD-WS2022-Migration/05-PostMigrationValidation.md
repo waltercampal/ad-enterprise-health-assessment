@@ -33,7 +33,7 @@ in full and confirm:
       Server or DFS Replication logs on the new DC(s) during the soak
       period.
 - [ ] **Infrastructure Score** - equal to or higher than the pre-phase
-      baseline (82/100 at the start of this migration - see
+      baseline (76/100 at the start of this migration - see
       [02 - Health Assessment](02-HealthAssessment.md)).
 - [ ] **Application/dependency check** - anything identified in
       [Migration Readiness](02-HealthAssessment.md) as co-located (ADCS,
@@ -66,9 +66,9 @@ The migration is considered complete when:
 - [ ] All FSMO roles are held by Windows Server 2022 Domain Controllers.
 - [ ] `Get-HLMigrationReadiness` reports `Healthy` across the board (schema
       version, no legacy OS DCs, FRS/DFSR complete, roles inventoried).
-- [ ] Infrastructure Score has improved from the 82/100 baseline (target:
+- [ ] Infrastructure Score has improved from the 76/100 baseline (target:
       95+, since several of the original findings - SMBv1, Kerberos pre-auth,
-      disk space - are remediated as part of this migration, not just
-      carried forward).
+      disk space, schema version - are remediated as part of this migration,
+      not just carried forward).
 - [ ] This case study's execution log ([04](04-MigrationExecution.md)) and
       checklists above are fully checked off and archived.

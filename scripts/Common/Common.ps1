@@ -56,6 +56,55 @@ function Export-AssessmentCsv {
 
 }
 
+function Get-HLCimInstance {
+
+    <#
+    .SYNOPSIS
+        Wraps Get-CimInstance so a remote call can be made with an alternate
+        credential.
+
+    .DESCRIPTION
+        Get-CimInstance's -ComputerName parameter set does not accept
+        -Credential in this environment's CimCmdlets module (confirmed via
+        Get-Command -Syntax against the real forest run). When a credential
+        is supplied, this instead opens a CimSession with that credential
+        and queries through it, closing the session afterward.
+    #>
+
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$ComputerName,
+
+        [Parameter(Mandatory)]
+        [string]$ClassName,
+
+        [string]$Filter,
+
+        [System.Management.Automation.PSCredential]$Credential
+    )
+
+    $QuerySplat = @{
+        ClassName   = $ClassName
+        ErrorAction = 'Stop'
+    }
+    if ($Filter) { $QuerySplat['Filter'] = $Filter }
+
+    if ($Credential) {
+        $Session = New-CimSession -ComputerName $ComputerName -Credential $Credential -ErrorAction Stop
+        try {
+            return Get-CimInstance @QuerySplat -CimSession $Session
+        }
+        finally {
+            Remove-CimSession -CimSession $Session -ErrorAction SilentlyContinue
+        }
+    }
+    else {
+        return Get-CimInstance @QuerySplat -ComputerName $ComputerName
+    }
+
+}
+
 function New-HealthResult {
 
     <#
