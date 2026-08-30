@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.1.1
+
+### Fixed
+
+- **Forest-wide scope**: every module now assesses the whole forest (root domain + every
+  child/tree domain), not just the domain the machine running the assessment happens to be
+  joined to. Added `Get-ForestDomains` / `Get-ForestDomainControllers` helpers to `Common.ps1`
+  and switched every domain- and DC-scoped module (Domain Information, FSMO Roles, DC Inventory,
+  Replication, SYSVOL, DNS, GPO Inventory, Security Baseline, Windows Services, Event Logs,
+  File Services) to use them instead of the caller's default domain context.
+- Fixed 5 issues found in code review: a dashboard crash on empty DHCP percentage values,
+  an incorrect error-vs-warning log level, an inconsistent reports-folder path, an
+  O(n²) array-append pattern in two modules, and a double Microsoft Graph sign-in prompt.
+
 ## v1.1.0
 
 ### Added

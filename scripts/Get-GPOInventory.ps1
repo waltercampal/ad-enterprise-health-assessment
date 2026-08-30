@@ -1,44 +1,60 @@
 <#
 .SYNOPSIS
-    Retrieves an inventory of all Group Policy Objects in the domain.
+    Retrieves an inventory of all Group Policy Objects across every domain in the forest.
 
 .DESCRIPTION
-    Collects each GPO's name, status, links, and last modification date to
-    help identify unlinked, disabled, or stale Group Policy Objects.
+    Enumerates every domain in the forest and collects each one's GPOs —
+    name, status, links, and last modification date — to help identify
+    unlinked, disabled, or stale Group Policy Objects anywhere in the
+    forest, not just in the domain the machine running this happens to be
+    joined to.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
 . "$PSScriptRoot\Common\Common.ps1"
 
-Write-Step "Collecting Group Policy Object inventory..."
+Write-Step "Collecting Group Policy Object inventory (all domains in the forest)..."
 
 if (!(Test-RequiredModule -ModuleName GroupPolicy)) { return }
+if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $GPOs = Get-GPO -All
+    $GpoReport = foreach ($DomainName in (Get-ForestDomains)) {
 
-    $GpoReport = foreach ($GPO in $GPOs) {
+        try {
 
-        [xml]$Report = Get-GPOReport -Guid $GPO.Id -ReportType Xml
-        $Links = $Report.GPO.LinksTo | ForEach-Object { $_.SOMPath }
+            $GPOs = Get-GPO -All -Domain $DomainName -ErrorAction Stop
 
-        [PSCustomObject]@{
+            foreach ($GPO in $GPOs) {
 
-            Name             = $GPO.DisplayName
-            Id               = $GPO.Id
-            GpoStatus        = $GPO.GpoStatus
-            CreationTime     = $GPO.CreationTime
-            ModificationTime = $GPO.ModificationTime
-            LinkedTo         = ($Links -join ", ")
-            LinkCount        = ($Links | Measure-Object).Count
+                [xml]$Report = Get-GPOReport -Guid $GPO.Id -Domain $DomainName -ReportType Xml
+                $Links = $Report.GPO.LinksTo | ForEach-Object { $_.SOMPath }
 
+                [PSCustomObject]@{
+
+                    Domain           = $DomainName
+                    Name             = $GPO.DisplayName
+                    Id               = $GPO.Id
+                    GpoStatus        = $GPO.GpoStatus
+                    CreationTime     = $GPO.CreationTime
+                    ModificationTime = $GPO.ModificationTime
+                    LinkedTo         = ($Links -join ", ")
+                    LinkCount        = ($Links | Measure-Object).Count
+
+                }
+
+            }
+
+        }
+        catch {
+            Write-WarningMessage "Could not query GPOs in domain '$DomainName': $($_.Exception.Message)"
         }
 
     }

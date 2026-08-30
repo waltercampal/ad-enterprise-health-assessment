@@ -3,3 +3,4 @@ CONTOSO-DC01.contoso.local,contoso.local,HQ-BuenosAires,10.10.1.10,Windows Serve
 CONTOSO-DC02.contoso.local,contoso.local,HQ-BuenosAires,10.10.1.11,Windows Server 2022 Datacenter,True,False,Yes
 CONTOSO-DC03.contoso.local,contoso.local,DR-Cordoba,10.20.1.10,Windows Server 2019 Datacenter,True,False,Yes
 CONTOSO-DC04.contoso.local,contoso.local,Branch-Rosario,10.30.1.10,Windows Server 2016 Standard,False,True,No
+EMEA-DC01.emea.contoso.local,emea.contoso.local,EMEA-London,10.50.1.10,Windows Server 2022 Datacenter,True,False,Yes

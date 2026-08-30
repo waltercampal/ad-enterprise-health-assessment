@@ -17,3 +17,9 @@ CONTOSO-DC03.contoso.local,Netlogon,Running,Automatic,True
 CONTOSO-DC03.contoso.local,Kdc,Running,Automatic,True
 CONTOSO-DC03.contoso.local,W32Time,Running,Automatic,True
 CONTOSO-DC03.contoso.local,DFSR,Running,Automatic,True
+EMEA-DC01.emea.contoso.local,NTDS,Running,Automatic,True
+EMEA-DC01.emea.contoso.local,DNS,Running,Automatic,True
+EMEA-DC01.emea.contoso.local,Netlogon,Running,Automatic,True
+EMEA-DC01.emea.contoso.local,Kdc,Running,Automatic,True
+EMEA-DC01.emea.contoso.local,W32Time,Running,Automatic,True
+EMEA-DC01.emea.contoso.local,DFSR,Running,Automatic,True

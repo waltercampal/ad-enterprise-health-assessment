@@ -1,2 +1,3 @@
-SchemaMaster,DomainNamingMaster,PDCEmulator,RIDMaster,InfrastructureMaster
-CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC02.contoso.local
+Domain,SchemaMaster,DomainNamingMaster,PDCEmulator,RIDMaster,InfrastructureMaster
+contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC02.contoso.local
+emea.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,EMEA-DC01.emea.contoso.local,EMEA-DC01.emea.contoso.local,EMEA-DC01.emea.contoso.local

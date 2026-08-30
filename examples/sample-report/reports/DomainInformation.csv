@@ -1,2 +1,3 @@
 DomainName,NetBIOSName,DomainMode,DistinguishedName,ParentDomain,PDCEmulator,RIDMaster,InfrastructureMaster
 contoso.local,CONTOSO,Windows2016Domain,"DC=contoso,DC=local",,CONTOSO-DC01.contoso.local,CONTOSO-DC01.contoso.local,CONTOSO-DC02.contoso.local
+emea.contoso.local,EMEA,Windows2016Domain,"DC=emea,DC=contoso,DC=local",contoso.local,EMEA-DC01.emea.contoso.local,EMEA-DC01.emea.contoso.local,EMEA-DC01.emea.contoso.local

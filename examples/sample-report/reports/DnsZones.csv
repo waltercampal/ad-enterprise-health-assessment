@@ -2,3 +2,4 @@ Server,ZoneName,ZoneType,IsDsIntegrated,IsSigned,Dynamic
 CONTOSO-DC01.contoso.local,contoso.local,Primary,True,False,Secure
 CONTOSO-DC01.contoso.local,_msdcs.contoso.local,Primary,True,False,Secure
 CONTOSO-DC01.contoso.local,10.10.in-addr.arpa,Primary,True,False,Secure
+EMEA-DC01.emea.contoso.local,emea.contoso.local,Primary,True,False,Secure

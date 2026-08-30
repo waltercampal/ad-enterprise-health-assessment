@@ -2,6 +2,10 @@
 
 This toolkit assesses an Active Directory environment in three phases, mirroring how the risk and blast radius of issues typically grow: from the directory itself, to the infrastructure around it, to the hybrid identity layer that depends on it.
 
+## Forest-wide scope
+
+Every module assesses the **whole forest** — the root domain and every child/tree domain — not just the domain the machine running the assessment happens to be joined to. `Common.ps1` provides two helpers used throughout: `Get-ForestDomains` (every domain's DNS name, via `Get-ADForest`) and `Get-ForestDomainControllers` (every Domain Controller in every domain, by querying `Get-ADDomainController -Filter * -Server <domain>` per domain instead of relying on the caller's default domain context). Domain-scoped modules (Domain Information, FSMO Roles, GPO Inventory, Security Baseline) loop over `Get-ForestDomains` and tag each row with the `Domain` it came from; DC-scoped modules (Replication, SYSVOL, DNS, Windows Services, Event Logs, File Services) loop over `Get-ForestDomainControllers`. Forest-wide data that already lives in the Configuration partition (Sites, Site Links, Certificate Services, DHCP) needed no change — it was already forest-scoped.
+
 ## Phase 1 — Foundation (`Start-EnterpriseAssessment.ps1`)
 
 Establishes the baseline: what the forest and domain look like, who holds the FSMO roles, whether Domain Controllers are healthy and replicating, whether SYSVOL and DNS are consistent, and whether Group Policy and core security controls meet a reasonable baseline.

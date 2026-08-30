@@ -22,7 +22,7 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ADDomainController -Filter *
+    $DomainControllers = Get-ForestDomainControllers
     $ZoneReport = @()
     $ServerReport = @()
 

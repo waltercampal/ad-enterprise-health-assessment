@@ -87,6 +87,60 @@ function Test-RequiredModule {
 
 }
 
+function Get-ForestDomains {
+
+    <#
+    .SYNOPSIS
+        Returns the DNS name of every domain in the current forest.
+
+    .DESCRIPTION
+        Used so assessment modules cover the whole forest (root domain +
+        every child/tree domain) instead of only the domain the machine
+        running the assessment happens to be joined to.
+    #>
+
+    try {
+        return @((Get-ADForest -ErrorAction Stop).Domains)
+    }
+    catch {
+        Write-ErrorMessage "Failed to enumerate forest domains, falling back to the current domain only: $($_.Exception.Message)"
+        try {
+            return @((Get-ADDomain -ErrorAction Stop).DNSRoot)
+        }
+        catch {
+            return @()
+        }
+    }
+
+}
+
+function Get-ForestDomainControllers {
+
+    <#
+    .SYNOPSIS
+        Returns every Domain Controller across every domain in the forest.
+
+    .DESCRIPTION
+        Get-ADDomainController -Filter * with no -Server only returns DCs in
+        the caller's own domain. This enumerates every domain in the forest
+        (via Get-ForestDomains) and queries each one explicitly, so the
+        assessment covers the root domain and every child domain rather than
+        just the domain the machine running it happens to be joined to.
+    #>
+
+    $AllDCs = foreach ($DomainName in (Get-ForestDomains)) {
+        try {
+            Get-ADDomainController -Filter * -Server $DomainName -ErrorAction Stop
+        }
+        catch {
+            Write-WarningMessage "Could not enumerate Domain Controllers in domain '$DomainName': $($_.Exception.Message)"
+        }
+    }
+
+    return @($AllDCs)
+
+}
+
 function Export-AssessmentCsv {
 
     param(

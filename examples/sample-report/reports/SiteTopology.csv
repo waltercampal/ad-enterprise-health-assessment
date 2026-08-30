@@ -3,3 +3,4 @@ HQ-BuenosAires,Headquarters,2,"10.10.1.0/24, 10.10.2.0/24"
 DR-Cordoba,Disaster Recovery,1,10.20.1.0/24
 Branch-Rosario,Branch Office,1,10.30.1.0/24
 Azure-EastUS,Cloud IaaS,1,10.40.0.0/24
+EMEA-London,EMEA Regional Office (emea.contoso.local),1,10.50.1.0/24

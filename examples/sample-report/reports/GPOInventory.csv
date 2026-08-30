@@ -1,4 +1,5 @@
-Name,Id,GpoStatus,CreationTime,ModificationTime,LinkedTo,LinkCount
-Default Domain Policy,6ac1786c-016f-11d2-945f-00c04fb984f9,AllSettingsEnabled,2020-08-31 23:10:08,2026-01-02 23:10:08,"DC=contoso,DC=local",1
-Workstation Security Baseline,a1b2c3d4-0000-0000-0000-000000000001,AllSettingsEnabled,2023-08-31 23:10:08,2026-07-01 23:10:08,"OU=Workstations,DC=contoso,DC=local",1
-Legacy Printer Deployment 2019,a1b2c3d4-0000-0000-0000-000000000002,AllSettingsDisabled,2019-09-01 23:10:08,2021-08-31 23:10:08,,0
+Domain,Name,Id,GpoStatus,CreationTime,ModificationTime,LinkedTo,LinkCount
+contoso.local,Default Domain Policy,6ac1786c-016f-11d2-945f-00c04fb984f9,AllSettingsEnabled,2020-08-31 23:48:17,2026-01-02 23:48:17,"DC=contoso,DC=local",1
+contoso.local,Workstation Security Baseline,a1b2c3d4-0000-0000-0000-000000000001,AllSettingsEnabled,2023-08-31 23:48:17,2026-07-01 23:48:17,"OU=Workstations,DC=contoso,DC=local",1
+contoso.local,Legacy Printer Deployment 2019,a1b2c3d4-0000-0000-0000-000000000002,AllSettingsDisabled,2019-09-01 23:48:17,2021-08-31 23:48:17,,0
+emea.contoso.local,EMEA Regional Settings,a1b2c3d4-0000-0000-0000-000000000003,AllSettingsEnabled,2024-08-30 23:48:17,2026-07-31 23:48:17,"DC=emea,DC=contoso,DC=local",1

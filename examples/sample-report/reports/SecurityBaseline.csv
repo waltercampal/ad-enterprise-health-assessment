@@ -1,8 +1,15 @@
-Check,Value,Severity
-Minimum Password Length,8,Warning
-Password Complexity Enabled,True,OK
-krbtgt Password Age (days),227,Warning
-Domain Admins Member Count,4,OK
-Non-Computer Accounts with Unconstrained Delegation,1,Warning
-Enabled Accounts with Non-Expiring Passwords,3,Warning
-Enabled Accounts Inactive 90+ Days,12,Warning
+Domain,Check,Value,Severity
+contoso.local,Minimum Password Length,8,Warning
+contoso.local,Password Complexity Enabled,True,OK
+contoso.local,krbtgt Password Age (days),227,Warning
+contoso.local,Domain Admins Member Count,4,OK
+contoso.local,Non-Computer Accounts with Unconstrained Delegation,1,Warning
+contoso.local,Enabled Accounts with Non-Expiring Passwords,3,Warning
+contoso.local,Enabled Accounts Inactive 90+ Days,12,Warning
+emea.contoso.local,Minimum Password Length,14,OK
+emea.contoso.local,Password Complexity Enabled,True,OK
+emea.contoso.local,krbtgt Password Age (days),94,OK
+emea.contoso.local,Domain Admins Member Count,3,OK
+emea.contoso.local,Non-Computer Accounts with Unconstrained Delegation,0,OK
+emea.contoso.local,Enabled Accounts with Non-Expiring Passwords,0,OK
+emea.contoso.local,Enabled Accounts Inactive 90+ Days,5,Warning

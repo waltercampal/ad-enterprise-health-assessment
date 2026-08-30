@@ -23,7 +23,7 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ADDomainController -Filter *
+    $DomainControllers = Get-ForestDomainControllers
     $LogNames = @("System", "Application", "Directory Service")
     $Since = (Get-Date).AddHours(-24)
 
