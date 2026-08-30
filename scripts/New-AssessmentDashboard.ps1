@@ -138,19 +138,28 @@ $Areas += New-AreaResult -AreaName "Group Policy" -Total $GpoInventory.Count `
 $Areas += New-AreaResult -AreaName "Security Baseline" -Total $SecurityBaseline.Count `
     -OK (@($SecurityBaseline | Where-Object { $_.Severity -eq "OK" })).Count
 
-$DhcpOk = @($DhcpScopes | Where-Object { [double]$_.PercentageInUse -lt 85 })
+$DhcpOk = @($DhcpScopes | Where-Object {
+    $Pct = $_.PercentageInUse -as [double]
+    $null -ne $Pct -and $Pct -lt 85
+})
 $Areas += New-AreaResult -AreaName "DHCP" -Total $DhcpScopes.Count -OK $DhcpOk.Count
 
 $Areas += New-AreaResult -AreaName "Certificate Services" -Total $CertServices.Count `
     -OK (@($CertServices | Where-Object { $_.Reachable -eq "Yes" })).Count
 
-$DiskOk = @($DiskCapacity | Where-Object { [double]$_.FreePercent -ge 15 })
+$DiskOk = @($DiskCapacity | Where-Object {
+    $Pct = $_.FreePercent -as [double]
+    $null -ne $Pct -and $Pct -ge 15
+})
 $Areas += New-AreaResult -AreaName "File Services / Disk Capacity" -Total $DiskCapacity.Count -OK $DiskOk.Count
 
 $DfsOk = @($DfsHealth | Where-Object { $_.State -eq "Online" })
 $Areas += New-AreaResult -AreaName "DFS Namespaces" -Total $DfsHealth.Count -OK $DfsOk.Count
 
-$EventOk = @($EventLogs | Where-Object { [int]$_.ErrorCount -le 20 })
+$EventOk = @($EventLogs | Where-Object {
+    $Count = $_.ErrorCount -as [int]
+    $null -ne $Count -and $Count -le 20
+})
 $Areas += New-AreaResult -AreaName "Event Logs (24h)" -Total $EventLogs.Count -OK $EventOk.Count
 
 $SvcOk = @($WindowsServices | Where-Object { $_.Healthy -eq "True" })

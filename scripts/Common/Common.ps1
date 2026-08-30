@@ -72,7 +72,7 @@ function Test-RequiredModule {
     )
 
     if (!(Get-Module -ListAvailable -Name $ModuleName)) {
-        Write-ErrorMessage "Required module '$ModuleName' is not available on this system. Skipping this check."
+        Write-WarningMessage "Module '$ModuleName' is not available on this system. Skipping this check."
         return $false
     }
 

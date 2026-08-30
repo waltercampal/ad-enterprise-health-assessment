@@ -32,8 +32,8 @@ try {
 
             $Zones = Get-DnsServerZone -ComputerName $DC.HostName -ErrorAction Stop
 
-            foreach ($Zone in $Zones) {
-                $ZoneReport += [PSCustomObject]@{
+            $ZoneReport += foreach ($Zone in $Zones) {
+                [PSCustomObject]@{
                     Server      = $DC.HostName
                     ZoneName    = $Zone.ZoneName
                     ZoneType    = $Zone.ZoneType

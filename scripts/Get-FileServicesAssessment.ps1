@@ -31,8 +31,8 @@ try {
 
         try {
             $Shares = Get-SmbShare -CimSession $DC.HostName -ErrorAction Stop
-            foreach ($Share in $Shares) {
-                $ShareReport += [PSCustomObject]@{
+            $ShareReport += foreach ($Share in $Shares) {
+                [PSCustomObject]@{
                     Server      = $DC.HostName
                     ShareName   = $Share.Name
                     Path        = $Share.Path
@@ -46,9 +46,9 @@ try {
 
         try {
             $Disks = Get-CimInstance -ComputerName $DC.HostName -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction Stop
-            foreach ($Disk in $Disks) {
+            $DiskReport += foreach ($Disk in $Disks) {
                 $FreePercent = if ($Disk.Size -gt 0) { [math]::Round(($Disk.FreeSpace / $Disk.Size) * 100, 1) } else { 0 }
-                $DiskReport += [PSCustomObject]@{
+                [PSCustomObject]@{
                     Server         = $DC.HostName
                     Drive          = $Disk.DeviceID
                     SizeGB         = [math]::Round($Disk.Size / 1GB, 1)

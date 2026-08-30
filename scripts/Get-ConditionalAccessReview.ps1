@@ -23,7 +23,11 @@ if (!(Test-RequiredModule -ModuleName Microsoft.Graph.Identity.SignIns)) { retur
 
 try {
 
-    Connect-MgGraph -Scopes "Policy.Read.All" -NoWelcome -ErrorAction Stop
+    # Reuse an existing Graph session (e.g. from another module run in the same
+    # orchestrator) instead of forcing a second interactive sign-in.
+    if (!(Get-MgContext)) {
+        Connect-MgGraph -Scopes "Policy.Read.All" -NoWelcome -ErrorAction Stop
+    }
 
     $Policies = Get-MgIdentityConditionalAccessPolicy
 
@@ -58,6 +62,5 @@ try {
 catch {
     Write-ErrorMessage "Failed to collect Conditional Access Review: $($_.Exception.Message)"
 }
-finally {
-    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-}
+# The Graph session is intentionally left connected so other modules in the
+# same run can reuse it. Run Disconnect-MgGraph yourself when you're done.

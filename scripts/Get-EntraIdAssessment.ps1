@@ -23,7 +23,11 @@ if (!(Test-RequiredModule -ModuleName Microsoft.Graph.Authentication)) { return 
 
 try {
 
-    Connect-MgGraph -Scopes "Organization.Read.All", "User.Read.All", "RoleManagement.Read.Directory" -NoWelcome -ErrorAction Stop
+    # Reuse an existing Graph session (e.g. from another module run in the same
+    # orchestrator) instead of forcing a second interactive sign-in.
+    if (!(Get-MgContext)) {
+        Connect-MgGraph -Scopes "Organization.Read.All", "User.Read.All", "RoleManagement.Read.Directory" -NoWelcome -ErrorAction Stop
+    }
 
     $Org = Get-MgOrganization
 
@@ -62,6 +66,6 @@ try {
 catch {
     Write-ErrorMessage "Failed to collect Entra ID Assessment: $($_.Exception.Message)"
 }
-finally {
-    Disconnect-MgGraph -ErrorAction SilentlyContinue | Out-Null
-}
+# The Graph session is intentionally left connected so other modules in the
+# same run (e.g. Get-ConditionalAccessReview.ps1) can reuse it. Run
+# Disconnect-MgGraph yourself when you're done with the hybrid identity phase.

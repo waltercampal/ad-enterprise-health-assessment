@@ -22,11 +22,7 @@ Write-Host " Horizon Labs" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ReportPath = ".\reports"
-
-if (!(Test-Path $ReportPath)) {
-    New-Item -ItemType Directory -Path $ReportPath | Out-Null
-}
+Initialize-ReportsFolder
 
 Write-Host "Starting assessment..." -ForegroundColor Yellow
 
@@ -54,4 +50,4 @@ Write-Host ""
 Write-Host "Assessment completed successfully." -ForegroundColor Green
 Write-Host ""
 Write-Host "Reports generated in:"
-Write-Host $ReportPath
+Write-Host ".\reports"
