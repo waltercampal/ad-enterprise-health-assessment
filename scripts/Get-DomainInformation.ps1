@@ -7,33 +7,37 @@
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
-Import-Module ActiveDirectory
+. "$PSScriptRoot\Common\Common.ps1"
 
-$Domain = Get-ADDomain
+Write-Step "Collecting Domain information..."
 
-$Info = [PSCustomObject]@{
+if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
-    DomainName = $Domain.DNSRoot
-    NetBIOSName = $Domain.NetBIOSName
-    DomainMode = $Domain.DomainMode
-    DistinguishedName = $Domain.DistinguishedName
-    ParentDomain = $Domain.ParentDomain
-    PDCEmulator = $Domain.PDCEmulator
-    RIDMaster = $Domain.RIDMaster
-    InfrastructureMaster = $Domain.InfrastructureMaster
+try {
+
+    $Domain = Get-ADDomain
+
+    $Info = [PSCustomObject]@{
+
+        DomainName            = $Domain.DNSRoot
+        NetBIOSName           = $Domain.NetBIOSName
+        DomainMode            = $Domain.DomainMode
+        DistinguishedName     = $Domain.DistinguishedName
+        ParentDomain          = $Domain.ParentDomain
+        PDCEmulator           = $Domain.PDCEmulator
+        RIDMaster             = $Domain.RIDMaster
+        InfrastructureMaster  = $Domain.InfrastructureMaster
+
+    }
+
+    $Info | Format-List
+
+    Export-AssessmentCsv -Data $Info -Name "DomainInformation"
 
 }
-
-$Info
-
-$Info |
-Export-Csv `
--Path ".\reports\DomainInformation.csv" `
--NoTypeInformation `
--Encoding UTF8
-
-Write-Host ""
-Write-Host "Domain information exported successfully." -ForegroundColor Green
+catch {
+    Write-ErrorMessage "Failed to collect Domain information: $($_.Exception.Message)"
+}

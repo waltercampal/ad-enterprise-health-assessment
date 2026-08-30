@@ -1,0 +1,4 @@
+Server,Drive,SizeGB,FreeSpaceGB,FreePercent
+CONTOSO-DC01.contoso.local,C:,120,54.2,45.2
+CONTOSO-DC02.contoso.local,C:,120,48.9,40.8
+CONTOSO-DC04.contoso.local,C:,80,6.1,7.6

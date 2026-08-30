@@ -1,0 +1,3 @@
+Server,Status,Healthy
+CONTOSO-PTA01.contoso.local,Running,True
+CONTOSO-PTA02.contoso.local,Stopped,False

@@ -1,0 +1,9 @@
+# Assessment output — generated locally, never committed.
+# (examples/sample-report/ is the intentional, checked-in exception.)
+/reports/*.csv
+/reports/*.html
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp

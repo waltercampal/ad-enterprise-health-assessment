@@ -38,6 +38,18 @@ Write-Host "Starting assessment..." -ForegroundColor Yellow
 
 .\scripts\Get-DomainControllerInventory.ps1
 
+.\scripts\Get-SiteTopology.ps1
+
+.\scripts\Get-ReplicationStatus.ps1
+
+.\scripts\Get-SysvolHealth.ps1
+
+.\scripts\Get-DnsAssessment.ps1
+
+.\scripts\Get-GPOInventory.ps1
+
+.\scripts\Get-SecurityBaseline.ps1
+
 Write-Host ""
 Write-Host "Assessment completed successfully." -ForegroundColor Green
 Write-Host ""

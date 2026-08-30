@@ -1,0 +1,3 @@
+Server,ScopeId,Name,State,StartRange,EndRange,PercentageInUse,AddressesFree,AddressesInUse
+CONTOSO-DC01.contoso.local,10.10.2.0,HQ-Workstations,Active,10.10.2.50,10.10.2.250,62.4,75,125
+CONTOSO-DC03.contoso.local,10.20.1.0,DR-Workstations,Active,10.20.1.50,10.20.1.150,91.0,9,91

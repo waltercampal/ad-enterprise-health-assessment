@@ -1,0 +1,5 @@
+Server,State,Note
+CONTOSO-DC01.contoso.local,Normal,
+CONTOSO-DC02.contoso.local,Normal,
+CONTOSO-DC03.contoso.local,Normal,
+CONTOSO-DC04.contoso.local,Auto Recovery,Branch DC recovering after WAN outage.

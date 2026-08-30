@@ -1,0 +1,4 @@
+Name,State,CreatedDate,ModifiedDate
+Require MFA for Admins,enabled,2024-08-30 23:10:08,2026-06-01 23:10:08
+Block Legacy Authentication,enabled,2024-08-30 23:10:08,2026-03-03 23:10:08
+Require MFA for All Users,enabledForReportingButNotEnforced,2026-07-31 23:10:08,2026-07-31 23:10:08

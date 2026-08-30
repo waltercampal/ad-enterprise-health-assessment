@@ -1,0 +1,4 @@
+SiteLinkName,Cost,ReplicationIntervalMin,SitesIncluded
+HQ-DR-Link,100,15,"HQ-BuenosAires, DR-Cordoba"
+HQ-Branch-Link,200,180,"HQ-BuenosAires, Branch-Rosario"
+HQ-Azure-Link,50,15,"HQ-BuenosAires, Azure-EastUS"

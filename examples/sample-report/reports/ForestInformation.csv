@@ -1,0 +1,2 @@
+ForestName,ForestMode,RootDomain,Domains,Sites,GlobalCatalogs,UPNSuffixes
+contoso.local,Windows2016Forest,contoso.local,"contoso.local, emea.contoso.local","HQ-BuenosAires, DR-Cordoba, Branch-Rosario, Azure-EastUS",4,contoso.com

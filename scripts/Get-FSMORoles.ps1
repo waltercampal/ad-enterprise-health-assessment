@@ -7,31 +7,35 @@
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
-Import-Module ActiveDirectory
+. "$PSScriptRoot\Common\Common.ps1"
 
-$Forest = Get-ADForest
-$Domain = Get-ADDomain
+Write-Step "Collecting FSMO role holders..."
 
-$FSMO = [PSCustomObject]@{
+if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
-    SchemaMaster       = $Forest.SchemaMaster
-    DomainNamingMaster = $Forest.DomainNamingMaster
-    PDCEmulator        = $Domain.PDCEmulator
-    RIDMaster          = $Domain.RIDMaster
-    InfrastructureMaster = $Domain.InfrastructureMaster
+try {
+
+    $Forest = Get-ADForest
+    $Domain = Get-ADDomain
+
+    $FSMO = [PSCustomObject]@{
+
+        SchemaMaster          = $Forest.SchemaMaster
+        DomainNamingMaster    = $Forest.DomainNamingMaster
+        PDCEmulator           = $Domain.PDCEmulator
+        RIDMaster             = $Domain.RIDMaster
+        InfrastructureMaster  = $Domain.InfrastructureMaster
+
+    }
+
+    $FSMO | Format-List
+
+    Export-AssessmentCsv -Data $FSMO -Name "FSMORoles"
 
 }
-
-$FSMO
-
-$FSMO |
-Export-Csv `
--Path ".\reports\FSMORoles.csv" `
--NoTypeInformation `
--Encoding UTF8
-
-Write-Host ""
-Write-Host "FSMO roles exported successfully." -ForegroundColor Green
+catch {
+    Write-ErrorMessage "Failed to collect FSMO roles: $($_.Exception.Message)"
+}

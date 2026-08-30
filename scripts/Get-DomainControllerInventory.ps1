@@ -18,46 +18,49 @@
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
-Import-Module ActiveDirectory
+. "$PSScriptRoot\Common\Common.ps1"
 
-$DomainControllers = Get-ADDomainController -Filter *
+Write-Step "Collecting Domain Controller inventory..."
 
-$Inventory = foreach ($DC in $DomainControllers) {
+if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
-    [PSCustomObject]@{
+try {
 
-        Name            = $DC.HostName
-        Domain          = $DC.Domain
-        Site            = $DC.Site
-        IPv4Address     = $DC.IPv4Address
-        OperatingSystem = $DC.OperatingSystem
-        GlobalCatalog   = $DC.IsGlobalCatalog
-        ReadOnly        = $DC.IsReadOnly
+    $DomainControllers = Get-ADDomainController -Filter *
 
-        Online = if (Test-Connection $DC.HostName -Count 1 -Quiet) {
-            "Yes"
-        }
-        else {
-            "No"
+    $Inventory = foreach ($DC in $DomainControllers) {
+
+        [PSCustomObject]@{
+
+            Name            = $DC.HostName
+            Domain          = $DC.Domain
+            Site            = $DC.Site
+            IPv4Address     = $DC.IPv4Address
+            OperatingSystem = $DC.OperatingSystem
+            GlobalCatalog   = $DC.IsGlobalCatalog
+            ReadOnly        = $DC.IsReadOnly
+
+            Online = if (Test-Connection $DC.HostName -Count 1 -Quiet) {
+                "Yes"
+            }
+            else {
+                "No"
+            }
+
         }
 
     }
 
+    $Inventory = $Inventory | Sort-Object Name
+
+    $Inventory | Format-Table -AutoSize
+
+    Export-AssessmentCsv -Data $Inventory -Name "DomainControllerInventory"
+
 }
-
-$Inventory | Sort-Object Name
-
-$Inventory |
-Export-Csv `
--Path ".\reports\DomainControllerInventory.csv" `
--NoTypeInformation `
--Encoding UTF8
-
-Write-Host ""
-Write-Host "Assessment completed successfully." -ForegroundColor Green
-Write-Host ""
-Write-Host "Inventory exported to:"
-Write-Host ".\reports\DomainControllerInventory.csv"
+catch {
+    Write-ErrorMessage "Failed to collect Domain Controller inventory: $($_.Exception.Message)"
+}

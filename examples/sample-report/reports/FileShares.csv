@@ -1,0 +1,3 @@
+Server,ShareName,Path,Description
+CONTOSO-DC01.contoso.local,NETLOGON,C:\Windows\SYSVOL\sysvol\contoso.local\SCRIPTS,
+CONTOSO-DC01.contoso.local,SYSVOL,C:\Windows\SYSVOL\sysvol,

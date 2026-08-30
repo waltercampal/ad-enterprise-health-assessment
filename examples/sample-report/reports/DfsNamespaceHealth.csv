@@ -1,0 +1,3 @@
+Namespace,Folder,TargetPath,State
+\\contoso.local\Public,\\contoso.local\Public\HR,\\CONTOSO-FS01\HR$,Online
+\\contoso.local\Public,\\contoso.local\Public\Finance,\\CONTOSO-FS02\Finance$,Offline

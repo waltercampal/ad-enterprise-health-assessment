@@ -1,0 +1,8 @@
+Check,Value,Severity
+Minimum Password Length,8,Warning
+Password Complexity Enabled,True,OK
+krbtgt Password Age (days),227,Warning
+Domain Admins Member Count,4,OK
+Non-Computer Accounts with Unconstrained Delegation,1,Warning
+Enabled Accounts with Non-Expiring Passwords,3,Warning
+Enabled Accounts Inactive 90+ Days,12,Warning
