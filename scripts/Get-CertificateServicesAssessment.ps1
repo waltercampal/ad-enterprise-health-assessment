@@ -11,9 +11,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query Active Directory with.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -23,10 +30,13 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $ConfigNC = (Get-ADRootDSE).configurationNamingContext
+    $AdParams = @{ ErrorAction = "Stop" }
+    if ($Credential) { $AdParams["Credential"] = $Credential }
+
+    $ConfigNC = (Get-ADRootDSE @AdParams).configurationNamingContext
     $EnrollmentServicesPath = "CN=Enrollment Services,CN=Public Key Services,CN=Services,$ConfigNC"
 
-    $CAs = Get-ADObject -SearchBase $EnrollmentServicesPath -Filter * -Properties dNSHostName, cACertificate, displayName -ErrorAction Stop |
+    $CAs = Get-ADObject -SearchBase $EnrollmentServicesPath -Filter * -Properties dNSHostName, cACertificate, displayName @AdParams |
         Where-Object { $_.ObjectClass -eq "pKIEnrollmentService" }
 
     $CAReport = foreach ($CA in $CAs) {

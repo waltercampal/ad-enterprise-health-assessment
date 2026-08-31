@@ -11,9 +11,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain/DC with.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -23,9 +30,12 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ForestDomainControllers
+    $DomainControllers = Get-ForestDomainControllers -Credential $Credential
     $LogNames = @("System", "Application", "Directory Service")
     $Since = (Get-Date).AddHours(-24)
+
+    $WinEventParams = @{ ErrorAction = "Stop" }
+    if ($Credential) { $WinEventParams["Credential"] = $Credential }
 
     $EventReport = foreach ($DC in $DomainControllers) {
 
@@ -33,11 +43,11 @@ try {
 
             try {
 
-                $Events = Get-WinEvent -ComputerName $DC.HostName -FilterHashtable @{
+                $Events = Get-WinEvent -ComputerName $DC.HostName @WinEventParams -FilterHashtable @{
                     LogName   = $LogName
                     Level     = 1, 2 # Critical, Error
                     StartTime = $Since
-                } -ErrorAction Stop
+                }
 
                 [PSCustomObject]@{
                     Server      = $DC.HostName

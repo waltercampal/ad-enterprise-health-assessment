@@ -11,9 +11,19 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every DHCP server with. The
+    DhcpServer module cmdlets don't reliably support -Credential across
+    versions, so this remotes into each server via PowerShell remoting
+    (WinRM) instead and runs the scope queries there.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -29,11 +39,40 @@ try {
 
         try {
 
-            $Scopes = Get-DhcpServerv4Scope -ComputerName $Server.DnsName -ErrorAction Stop
+            if ($Credential) {
+                $Scopes = Invoke-Command -ComputerName $Server.DnsName -Credential $Credential -ErrorAction Stop -ScriptBlock {
+                    Get-DhcpServerv4Scope | ForEach-Object {
+                        $Stats = Get-DhcpServerv4ScopeStatistics -ScopeId $_.ScopeId -ErrorAction SilentlyContinue
+                        [PSCustomObject]@{
+                            ScopeId         = $_.ScopeId
+                            Name            = $_.Name
+                            State           = $_.State
+                            StartRange      = $_.StartRange
+                            EndRange        = $_.EndRange
+                            PercentageInUse = $Stats.PercentageInUse
+                            AddressesFree   = $Stats.Free
+                            AddressesInUse  = $Stats.InUse
+                        }
+                    }
+                }
+            }
+            else {
+                $Scopes = Get-DhcpServerv4Scope -ComputerName $Server.DnsName -ErrorAction Stop | ForEach-Object {
+                    $Stats = Get-DhcpServerv4ScopeStatistics -ComputerName $Server.DnsName -ScopeId $_.ScopeId -ErrorAction SilentlyContinue
+                    [PSCustomObject]@{
+                        ScopeId         = $_.ScopeId
+                        Name            = $_.Name
+                        State           = $_.State
+                        StartRange      = $_.StartRange
+                        EndRange        = $_.EndRange
+                        PercentageInUse = $Stats.PercentageInUse
+                        AddressesFree   = $Stats.Free
+                        AddressesInUse  = $Stats.InUse
+                    }
+                }
+            }
 
             foreach ($Scope in $Scopes) {
-
-                $Stats = Get-DhcpServerv4ScopeStatistics -ComputerName $Server.DnsName -ScopeId $Scope.ScopeId -ErrorAction SilentlyContinue
 
                 [PSCustomObject]@{
 
@@ -43,9 +82,9 @@ try {
                     State             = $Scope.State
                     StartRange        = $Scope.StartRange
                     EndRange          = $Scope.EndRange
-                    PercentageInUse   = $Stats.PercentageInUse
-                    AddressesFree     = $Stats.Free
-                    AddressesInUse    = $Stats.InUse
+                    PercentageInUse   = $Scope.PercentageInUse
+                    AddressesFree     = $Scope.AddressesFree
+                    AddressesInUse    = $Scope.AddressesInUse
 
                 }
 

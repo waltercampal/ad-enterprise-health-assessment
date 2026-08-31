@@ -11,9 +11,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain/DC with.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -23,14 +30,22 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ForestDomainControllers
+    $DomainControllers = Get-ForestDomainControllers -Credential $Credential
     $ShareReport = @()
     $DiskReport = @()
 
     foreach ($DC in $DomainControllers) {
 
+        $CimSession = $null
+
         try {
-            $Shares = Get-SmbShare -CimSession $DC.HostName -ErrorAction Stop
+            if ($Credential) {
+                $CimSession = New-CimSession -ComputerName $DC.HostName -Credential $Credential -ErrorAction Stop
+                $Shares = Get-SmbShare -CimSession $CimSession -ErrorAction Stop
+            }
+            else {
+                $Shares = Get-SmbShare -CimSession $DC.HostName -ErrorAction Stop
+            }
             $ShareReport += foreach ($Share in $Shares) {
                 [PSCustomObject]@{
                     Server      = $DC.HostName
@@ -45,7 +60,10 @@ try {
         }
 
         try {
-            $Disks = Get-CimInstance -ComputerName $DC.HostName -ClassName Win32_LogicalDisk -Filter "DriveType=3" -ErrorAction Stop
+            $CimParams = @{ ComputerName = $DC.HostName; ClassName = "Win32_LogicalDisk"; Filter = "DriveType=3"; ErrorAction = "Stop" }
+            if ($Credential) { $CimParams["Credential"] = $Credential }
+
+            $Disks = Get-CimInstance @CimParams
             $DiskReport += foreach ($Disk in $Disks) {
                 $FreePercent = if ($Disk.Size -gt 0) { [math]::Round(($Disk.FreeSpace / $Disk.Size) * 100, 1) } else { 0 }
                 [PSCustomObject]@{
@@ -59,6 +77,9 @@ try {
         }
         catch {
             Write-WarningMessage "Could not query disk information on $($DC.HostName): $($_.Exception.Message)"
+        }
+        finally {
+            if ($CimSession) { Remove-CimSession $CimSession -ErrorAction SilentlyContinue }
         }
 
     }
