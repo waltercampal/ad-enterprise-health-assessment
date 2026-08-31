@@ -11,6 +11,11 @@
     and will prompt for interactive sign-in (Connect-MgGraph). Run this
     separately from the unattended on-prem assessments.
 
+    NOTE: Get-EntraConnectStatus.ps1, Get-PtaAgentStatus.ps1, and
+    Get-CloudSyncStatus.ps1 each need their server list edited to match
+    your environment (see the top of each script) before they'll do
+    anything other than print a warning and skip.
+
 .AUTHOR
     Walter Campal
     Horizon Labs

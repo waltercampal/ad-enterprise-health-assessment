@@ -3,68 +3,106 @@
     Assesses Microsoft Entra Connect (Azure AD Connect) sync health.
 
 .DESCRIPTION
-    Must be run ON the Entra Connect sync server. Reports the sync
-    scheduler configuration and the result of the last connector run
-    for each configured connector (AD and Entra ID).
+    Queries every configured Entra Connect server remotely (via PowerShell
+    remoting) for its sync scheduler state and the result of each
+    connector's last run. Supports multi-server HA topologies (e.g. one
+    active server plus one in staging mode) and flags if more than one
+    server is active (not in staging mode) at the same time, which risks
+    conflicting writes back to Active Directory.
+
+    Each target server needs the ADSync module installed locally (it is,
+    wherever Entra Connect itself is installed) and must allow incoming
+    PowerShell remoting (WinRM) from wherever this script runs.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
 . "$PSScriptRoot\Common\Common.ps1"
 
 Write-Step "Collecting Entra Connect Sync status..."
 
-if (!(Test-RequiredModule -ModuleName ADSync)) {
-    Write-WarningMessage "This check must run on the Entra Connect sync server (ADSync module not found here)."
+# Edit this list to match your environment's Entra Connect (Azure AD Connect)
+# sync servers - e.g. an active server plus a staging-mode server for HA.
+$EntraConnectServers = @()
+
+if ($EntraConnectServers.Count -eq 0) {
+    Write-WarningMessage "No Entra Connect servers configured. Edit `$EntraConnectServers in this script and re-run."
     return
 }
 
 try {
 
-    $Scheduler = Get-ADSyncScheduler
+    $SchedulerReport = @()
+    $RunReport = @()
 
-    $SchedulerInfo = [PSCustomObject]@{
+    foreach ($Server in $EntraConnectServers) {
 
-        SyncCycleEnabled       = $Scheduler.SyncCycleEnabled
-        SyncCycleInProgress    = $Scheduler.SyncCycleInProgress
-        NextSyncCycleStartTime = $Scheduler.NextSyncCycleStartTimeInUTC
-        LastSyncCycleStartTime = $Scheduler.LastSyncCycleStartTimeInUTC
+        try {
 
-    }
+            $Result = Invoke-Command -ComputerName $Server -ErrorAction Stop -ScriptBlock {
+                Import-Module ADSync -ErrorAction Stop
 
-    $SchedulerInfo | Format-List
+                $Scheduler = Get-ADSyncScheduler
 
-    Export-AssessmentCsv -Data $SchedulerInfo -Name "EntraConnectScheduler"
+                $ConnectorRuns = foreach ($Connector in (Get-ADSyncConnector)) {
+                    [PSCustomObject]@{
+                        Name    = $Connector.Name
+                        Type    = $Connector.ConnectorTypeName
+                        LastRun = Get-ADSyncConnectorRunStatus -ConnectorName $Connector.Name -ErrorAction SilentlyContinue
+                    }
+                }
 
-    $Connectors = Get-ADSyncConnector
+                [PSCustomObject]@{
+                    Scheduler     = $Scheduler
+                    ConnectorRuns = $ConnectorRuns
+                }
+            }
 
-    $RunReport = foreach ($Connector in $Connectors) {
+            $SchedulerReport += [PSCustomObject]@{
+                Server                 = $Server
+                SyncCycleEnabled       = $Result.Scheduler.SyncCycleEnabled
+                SyncCycleInProgress    = $Result.Scheduler.SyncCycleInProgress
+                StagingModeEnabled     = $Result.Scheduler.StagingModeEnabled
+                NextSyncCycleStartTime = $Result.Scheduler.NextSyncCycleStartTimeInUTC
+                LastSyncCycleStartTime = $Result.Scheduler.LastSyncCycleStartTimeInUTC
+            }
 
-        $LastRun = Get-ADSyncConnectorRunStatus -ConnectorName $Connector.Name -ErrorAction SilentlyContinue
+            foreach ($Connector in $Result.ConnectorRuns) {
+                $RunReport += [PSCustomObject]@{
+                    Server        = $Server
+                    ConnectorName = $Connector.Name
+                    ConnectorType = $Connector.Type
+                    LastRunResult = $Connector.LastRun.RunResult
+                    LastRunDate   = $Connector.LastRun.RunHistoryDate
+                }
+            }
 
-        [PSCustomObject]@{
-
-            ConnectorName = $Connector.Name
-            ConnectorType = $Connector.ConnectorTypeName
-            LastRunResult = $LastRun.RunResult
-            LastRunDate   = $LastRun.RunHistoryDate
-
+        }
+        catch {
+            Write-WarningMessage "Could not query Entra Connect status on '$Server': $($_.Exception.Message)"
         }
 
     }
 
+    $SchedulerReport | Format-Table -AutoSize
     $RunReport | Format-Table -AutoSize
 
+    Export-AssessmentCsv -Data $SchedulerReport -Name "EntraConnectScheduler"
     Export-AssessmentCsv -Data $RunReport -Name "EntraConnectConnectorRuns"
+
+    $ActiveServers = $SchedulerReport | Where-Object { $_.StagingModeEnabled -eq $false }
+    if (($ActiveServers | Measure-Object).Count -gt 1) {
+        Write-WarningMessage "$($ActiveServers.Count) Entra Connect servers are active (not in staging mode) at the same time - only one should be active to avoid conflicting writes."
+    }
 
     $Failed = $RunReport | Where-Object { $_.LastRunResult -and $_.LastRunResult -ne "success" }
     if ($Failed) {
-        Write-WarningMessage "$($Failed.Count) connector(s) did not complete their last run successfully."
+        Write-WarningMessage "$($Failed.Count) connector run(s) did not complete successfully."
     }
 
 }
