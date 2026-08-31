@@ -36,15 +36,30 @@ try {
 
     foreach ($DC in $DomainControllers) {
 
+        # One CimSession per DC, reused for both the share and disk queries
+        # below. Get-CimInstance -ComputerName combined with -Credential is
+        # unreliable across PowerShell/CIM versions ("A parameter cannot be
+        # found that matches parameter name 'Credential'"); -CimSession is
+        # the mechanism that actually works, confirmed against a real
+        # environment where the -CimSession-based share query succeeded and
+        # the -ComputerName/-Credential disk query failed on every server.
         $CimSession = $null
 
         try {
             if ($Credential) {
                 $CimSession = New-CimSession -ComputerName $DC.HostName -Credential $Credential -ErrorAction Stop
-                $Shares = Get-SmbShare -CimSession $CimSession -ErrorAction Stop
+            }
+        }
+        catch {
+            Write-WarningMessage "Could not open a CIM session to $($DC.HostName): $($_.Exception.Message)"
+        }
+
+        try {
+            $Shares = if ($CimSession) {
+                Get-SmbShare -CimSession $CimSession -ErrorAction Stop
             }
             else {
-                $Shares = Get-SmbShare -CimSession $DC.HostName -ErrorAction Stop
+                Get-SmbShare -CimSession $DC.HostName -ErrorAction Stop
             }
             $ShareReport += foreach ($Share in $Shares) {
                 [PSCustomObject]@{
@@ -60,8 +75,8 @@ try {
         }
 
         try {
-            $CimParams = @{ ComputerName = $DC.HostName; ClassName = "Win32_LogicalDisk"; Filter = "DriveType=3"; ErrorAction = "Stop" }
-            if ($Credential) { $CimParams["Credential"] = $Credential }
+            $CimParams = @{ ClassName = "Win32_LogicalDisk"; Filter = "DriveType=3"; ErrorAction = "Stop" }
+            if ($CimSession) { $CimParams["CimSession"] = $CimSession } else { $CimParams["ComputerName"] = $DC.HostName }
 
             $Disks = Get-CimInstance @CimParams
             $DiskReport += foreach ($Disk in $Disks) {

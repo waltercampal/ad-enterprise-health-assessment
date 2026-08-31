@@ -36,16 +36,34 @@ try {
 
     $ServiceReport = foreach ($DC in $DomainControllers) {
 
+        # One CimSession per DC, reused for all 6 services. Get-CimInstance
+        # -ComputerName combined with -Credential is unreliable across
+        # PowerShell/CIM versions ("A parameter cannot be found that matches
+        # parameter name 'Credential'") - -CimSession is the mechanism that
+        # actually works, confirmed against a real environment.
+        $CimSession = $null
+
+        if ($Credential) {
+            try {
+                $CimSession = New-CimSession -ComputerName $DC.HostName -Credential $Credential -ErrorAction Stop
+            }
+            catch {
+                Write-WarningMessage "Could not open a CIM session to $($DC.HostName): $($_.Exception.Message)"
+            }
+        }
+
         foreach ($ServiceName in $CriticalServices) {
 
             try {
 
                 if ($Credential) {
-                    # Get-Service has no -Credential parameter; Win32_Service
-                    # reports Started/Stopped and Auto/Manual/Disabled instead
-                    # of Get-Service's Running/Stopped and Automatic/Manual.
-                    $Svc = Get-CimInstance -ComputerName $DC.HostName -ClassName Win32_Service `
-                        -Filter "Name='$ServiceName'" -Credential $Credential -ErrorAction Stop
+                    if (!$CimSession) { throw "No CIM session available for $($DC.HostName)." }
+
+                    # Win32_Service reports Started/Stopped and
+                    # Auto/Manual/Disabled instead of Get-Service's
+                    # Running/Stopped and Automatic/Manual.
+                    $Svc = Get-CimInstance -CimSession $CimSession -ClassName Win32_Service `
+                        -Filter "Name='$ServiceName'" -ErrorAction Stop
 
                     if (!$Svc) { throw "Service '$ServiceName' not found." }
 
@@ -78,6 +96,8 @@ try {
             }
 
         }
+
+        if ($CimSession) { Remove-CimSession $CimSession -ErrorAction SilentlyContinue }
 
     }
 

@@ -64,7 +64,19 @@ try {
                 }
             }
             catch {
-                Write-WarningMessage "Could not query '$LogName' on $($DC.HostName): $($_.Exception.Message)"
+                # Get-WinEvent throws when a FilterHashtable simply matches
+                # nothing - that's not a failure, it means zero Critical/Error
+                # events in the window (good news), not something to warn about.
+                if ($_.Exception.Message -match "No events were found") {
+                    [PSCustomObject]@{
+                        Server      = $DC.HostName
+                        LogName     = $LogName
+                        ErrorCount  = 0
+                    }
+                }
+                else {
+                    Write-WarningMessage "Could not query '$LogName' on $($DC.HostName): $($_.Exception.Message)"
+                }
             }
 
         }
