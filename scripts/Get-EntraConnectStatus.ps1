@@ -62,11 +62,32 @@ try {
 
                 $Scheduler = Get-ADSyncScheduler
 
+                # Get-ADSyncConnectorRunStatus's parameter set varies across
+                # Entra Connect / ADSync module versions (-ConnectorName isn't
+                # accepted on all of them). A parameter-binding error is a
+                # terminating error that -ErrorAction can't suppress, so try
+                # a couple of call shapes and fall back to $null rather than
+                # letting one connector's run-status lookup take down the
+                # whole server's report.
                 $ConnectorRuns = foreach ($Connector in (Get-ADSyncConnector)) {
+
+                    $LastRun = $null
+                    try {
+                        $LastRun = Get-ADSyncConnectorRunStatus -ConnectorName $Connector.Name -ErrorAction Stop
+                    }
+                    catch {
+                        try {
+                            $LastRun = Get-ADSyncConnectorRunStatus $Connector.Name -ErrorAction Stop
+                        }
+                        catch {
+                            # Not available on this ADSync module version - LastRun stays $null.
+                        }
+                    }
+
                     [PSCustomObject]@{
                         Name    = $Connector.Name
                         Type    = $Connector.ConnectorTypeName
-                        LastRun = Get-ADSyncConnectorRunStatus -ConnectorName $Connector.Name -ErrorAction SilentlyContinue
+                        LastRun = $LastRun
                     }
                 }
 
