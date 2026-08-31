@@ -4,11 +4,14 @@
 
 .DESCRIPTION
     Queries every configured Entra Connect server remotely (via PowerShell
-    remoting) for its sync scheduler state and the result of each
-    connector's last run. Supports multi-server HA topologies (e.g. one
-    active server plus one in staging mode) and flags if more than one
-    server is active (not in staging mode) at the same time, which risks
-    conflicting writes back to Active Directory.
+    remoting) for its sync scheduler state, the result of each connector's
+    last run (best-effort - the ADSync module's run-status API varies by
+    version), and recent sync-related events from the Application event
+    log (provider "Directory Synchronization") as a version-independent
+    fallback for spotting failures. Supports multi-server HA topologies
+    (e.g. one active server plus one in staging mode) and flags if more
+    than one server is active (not in staging mode) at the same time,
+    which risks conflicting writes back to Active Directory.
 
     Each target server needs the ADSync module installed locally (it is,
     wherever Entra Connect itself is installed) and must allow incoming
@@ -24,7 +27,7 @@
     Horizon Labs
 
 .VERSION
-    0.3.0
+    0.4.0
 #>
 
 param(
@@ -52,6 +55,7 @@ try {
 
     $SchedulerReport = @()
     $RunReport = @()
+    $EventReport = @()
 
     foreach ($Server in $EntraConnectServers) {
 
@@ -91,9 +95,31 @@ try {
                     }
                 }
 
+                # Cross-version fallback for "did the last sync cycle succeed":
+                # the sync engine (miiserver.exe) logs each run's outcome to the
+                # Application event log under provider "Directory Synchronization"
+                # regardless of ADSync module version. Surface the raw recent
+                # events (level + message) rather than guessing which specific
+                # Event ID means success on this version.
+                $SyncEvents = $null
+                try {
+                    $SyncEvents = Get-WinEvent -FilterHashtable @{
+                        LogName      = "Application"
+                        ProviderName = "Directory Synchronization"
+                        StartTime    = (Get-Date).AddHours(-24)
+                    } -ErrorAction Stop |
+                        Select-Object -First 25 TimeCreated, Id, LevelDisplayName,
+                            @{Name = "Message"; Expression = { ($_.Message -split "`r?`n")[0] } }
+                }
+                catch [System.Exception] {
+                    # Get-WinEvent throws when there are simply no matching events
+                    # in the window (not a real failure) - leave $SyncEvents empty.
+                }
+
                 [PSCustomObject]@{
                     Scheduler     = $Scheduler
                     ConnectorRuns = $ConnectorRuns
+                    SyncEvents    = $SyncEvents
                 }
             }
 
@@ -116,6 +142,16 @@ try {
                 }
             }
 
+            foreach ($Evt in $Result.SyncEvents) {
+                $EventReport += [PSCustomObject]@{
+                    Server      = $Server
+                    TimeCreated = $Evt.TimeCreated
+                    EventId     = $Evt.Id
+                    Level       = $Evt.LevelDisplayName
+                    Message     = $Evt.Message
+                }
+            }
+
         }
         catch {
             Write-WarningMessage "Could not query Entra Connect status on '$Server': $($_.Exception.Message)"
@@ -125,9 +161,11 @@ try {
 
     $SchedulerReport | Format-Table -AutoSize
     $RunReport | Format-Table -AutoSize
+    $EventReport | Format-Table -AutoSize
 
     Export-AssessmentCsv -Data $SchedulerReport -Name "EntraConnectScheduler"
     Export-AssessmentCsv -Data $RunReport -Name "EntraConnectConnectorRuns"
+    Export-AssessmentCsv -Data $EventReport -Name "EntraConnectSyncEvents"
 
     $ActiveServers = $SchedulerReport | Where-Object { $_.StagingModeEnabled -eq $false }
     if (($ActiveServers | Measure-Object).Count -gt 1) {
@@ -137,6 +175,11 @@ try {
     $Failed = $RunReport | Where-Object { $_.LastRunResult -and $_.LastRunResult -ne "success" }
     if ($Failed) {
         Write-WarningMessage "$($Failed.Count) connector run(s) did not complete successfully."
+    }
+
+    $ErrorEvents = $EventReport | Where-Object { $_.Level -in @("Error", "Warning") }
+    if ($ErrorEvents) {
+        Write-WarningMessage "$($ErrorEvents.Count) Warning/Error-level sync event(s) in the Application log (last 24h) - see EntraConnectSyncEvents.csv."
     }
 
 }
