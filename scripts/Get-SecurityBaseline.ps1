@@ -68,8 +68,14 @@ try {
                 Severity = if (($DomainAdmins | Measure-Object).Count -gt 5) { "Warning" } else { "OK" }
             }
 
-            # Accounts with unconstrained Kerberos delegation
-            $DelegationAccounts = Get-ADObject -Filter { TrustedForDelegation -eq $true -and ObjectClass -ne "computer" } -Server $DomainName -Properties TrustedForDelegation
+            # Accounts with unconstrained Kerberos delegation.
+            # Get-ADObject doesn't understand the "TrustedForDelegation" filter
+            # alias (that's only implemented on Get-ADUser/Get-ADComputer) - use
+            # an LDAP filter on the real userAccountControl bit
+            # (TRUSTED_FOR_DELEGATION = 0x80000) instead.
+            $DelegationAccounts = Get-ADObject `
+                -LDAPFilter "(&(!(objectClass=computer))(userAccountControl:1.2.840.113556.1.4.803:=524288))" `
+                -Server $DomainName -Properties userAccountControl
 
             [PSCustomObject]@{
                 Domain   = $DomainName
