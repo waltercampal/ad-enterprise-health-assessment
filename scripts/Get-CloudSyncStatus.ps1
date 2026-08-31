@@ -4,16 +4,25 @@
 
 .DESCRIPTION
     Queries the "Microsoft Azure AD Connect Provisioning Agent" service
-    status on each configured Cloud Sync agent server. Edit
-    $CloudSyncAgentServers to match your environment.
+    status on each configured Cloud Sync agent server via PowerShell
+    remoting. Edit $CloudSyncAgentServers to match your environment.
+
+.PARAMETER Credential
+    Credential to remote into each Cloud Sync agent server with (needs
+    local admin rights there). If omitted, and the servers list is
+    non-empty, you'll be prompted once.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -27,12 +36,18 @@ if ($CloudSyncAgentServers.Count -eq 0) {
     return
 }
 
+if (!$Credential) {
+    $Credential = Get-Credential -Message "Credentials for Cloud Sync agent servers (needs local admin rights on each server)"
+}
+
 try {
 
     $CloudSyncReport = foreach ($AgentServer in $CloudSyncAgentServers) {
 
         try {
-            $Service = Get-Service -ComputerName $AgentServer -Name "AzureADConnectProvisioningAgentService" -ErrorAction Stop
+            $Service = Invoke-Command -ComputerName $AgentServer -Credential $Credential -ErrorAction Stop -ScriptBlock {
+                Get-Service -Name "AzureADConnectProvisioningAgentService" -ErrorAction Stop
+            }
 
             [PSCustomObject]@{
                 Server  = $AgentServer
@@ -41,6 +56,7 @@ try {
             }
         }
         catch {
+            Write-WarningMessage "Could not query Cloud Sync agent on '$AgentServer': $($_.Exception.Message)"
             [PSCustomObject]@{
                 Server  = $AgentServer
                 Status  = "Unreachable"

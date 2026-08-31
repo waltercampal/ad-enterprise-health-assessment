@@ -71,19 +71,34 @@ function Test-RequiredModule {
         [string]$ModuleName
     )
 
-    if (!(Get-Module -ListAvailable -Name $ModuleName)) {
-        Write-WarningMessage "Module '$ModuleName' is not available on this system. Skipping this check."
-        return $false
+    if (Get-Module -ListAvailable -Name $ModuleName) {
+        try {
+            Import-Module $ModuleName -ErrorAction Stop
+            return $true
+        }
+        catch {
+            Write-ErrorMessage "Failed to import module '$ModuleName': $($_.Exception.Message)"
+            return $false
+        }
     }
 
-    try {
-        Import-Module $ModuleName -ErrorAction Stop
-        return $true
+    # Some RSAT modules (e.g. GroupPolicy) aren't on PowerShell 7's own module
+    # path and, unlike ActiveDirectory, aren't on its default auto-compat
+    # list either - so Get-Module -ListAvailable finds nothing even when the
+    # RSAT feature is installed. Try loading them explicitly through the
+    # Windows PowerShell Compatibility layer before giving up.
+    if ($PSVersionTable.PSEdition -eq "Core") {
+        try {
+            Import-Module $ModuleName -UseWindowsPowerShell -ErrorAction Stop -WarningAction SilentlyContinue
+            return $true
+        }
+        catch {
+            # Fall through to the warning below.
+        }
     }
-    catch {
-        Write-ErrorMessage "Failed to import module '$ModuleName': $($_.Exception.Message)"
-        return $false
-    }
+
+    Write-WarningMessage "Module '$ModuleName' is not available on this system. Skipping this check."
+    return $false
 
 }
 
