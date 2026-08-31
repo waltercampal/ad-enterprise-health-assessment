@@ -11,9 +11,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query with.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -23,9 +30,12 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $Sites = Get-ADReplicationSite -Filter * -Properties Description
-    $Subnets = Get-ADReplicationSubnet -Filter * -Properties Site
-    $SiteLinks = Get-ADReplicationSiteLink -Filter * -Properties Cost, ReplicationFrequencyInMinutes, SitesIncluded
+    $AdParams = @{}
+    if ($Credential) { $AdParams["Credential"] = $Credential }
+
+    $Sites = Get-ADReplicationSite -Filter * -Properties Description @AdParams
+    $Subnets = Get-ADReplicationSubnet -Filter * -Properties Site @AdParams
+    $SiteLinks = Get-ADReplicationSiteLink -Filter * -Properties Cost, ReplicationFrequencyInMinutes, SitesIncluded @AdParams
 
     $SiteReport = foreach ($Site in $Sites) {
 

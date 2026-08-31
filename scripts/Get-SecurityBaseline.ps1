@@ -14,9 +14,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain with.
+
 .VERSION
-    0.2.0
+    0.3.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -26,12 +33,15 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $Findings = foreach ($DomainName in (Get-ForestDomains)) {
+    $AdParams = @{ ErrorAction = "Stop" }
+    if ($Credential) { $AdParams["Credential"] = $Credential }
+
+    $Findings = foreach ($DomainName in (Get-ForestDomains -Credential $Credential)) {
 
         try {
 
             # Password policy
-            $PasswordPolicy = Get-ADDefaultDomainPasswordPolicy -Server $DomainName -ErrorAction Stop
+            $PasswordPolicy = Get-ADDefaultDomainPasswordPolicy -Server $DomainName @AdParams
 
             [PSCustomObject]@{
                 Domain   = $DomainName
@@ -48,7 +58,7 @@ try {
             }
 
             # krbtgt account age
-            $Krbtgt = Get-ADUser -Identity "krbtgt" -Server $DomainName -Properties PasswordLastSet
+            $Krbtgt = Get-ADUser -Identity "krbtgt" -Server $DomainName -Properties PasswordLastSet @AdParams
             $KrbtgtAgeDays = (New-TimeSpan -Start $Krbtgt.PasswordLastSet -End (Get-Date)).Days
 
             [PSCustomObject]@{
@@ -59,7 +69,7 @@ try {
             }
 
             # Domain Admins membership
-            $DomainAdmins = Get-ADGroupMember -Identity "Domain Admins" -Server $DomainName -Recursive
+            $DomainAdmins = Get-ADGroupMember -Identity "Domain Admins" -Server $DomainName -Recursive @AdParams
 
             [PSCustomObject]@{
                 Domain   = $DomainName
@@ -75,7 +85,7 @@ try {
             # (TRUSTED_FOR_DELEGATION = 0x80000) instead.
             $DelegationAccounts = Get-ADObject `
                 -LDAPFilter "(&(!(objectClass=computer))(userAccountControl:1.2.840.113556.1.4.803:=524288))" `
-                -Server $DomainName -Properties userAccountControl
+                -Server $DomainName -Properties userAccountControl @AdParams
 
             [PSCustomObject]@{
                 Domain   = $DomainName
@@ -85,7 +95,7 @@ try {
             }
 
             # Passwords that never expire
-            $NeverExpire = Get-ADUser -Filter { PasswordNeverExpires -eq $true -and Enabled -eq $true } -Server $DomainName -Properties PasswordNeverExpires
+            $NeverExpire = Get-ADUser -Filter { PasswordNeverExpires -eq $true -and Enabled -eq $true } -Server $DomainName -Properties PasswordNeverExpires @AdParams
 
             [PSCustomObject]@{
                 Domain   = $DomainName
@@ -96,7 +106,7 @@ try {
 
             # Stale accounts (no logon in 90+ days)
             $StaleThreshold = (Get-Date).AddDays(-90)
-            $StaleAccounts = Get-ADUser -Filter { LastLogonTimeStamp -lt $StaleThreshold -and Enabled -eq $true } -Server $DomainName -Properties LastLogonTimeStamp
+            $StaleAccounts = Get-ADUser -Filter { LastLogonTimeStamp -lt $StaleThreshold -and Enabled -eq $true } -Server $DomainName -Properties LastLogonTimeStamp @AdParams
 
             [PSCustomObject]@{
                 Domain   = $DomainName

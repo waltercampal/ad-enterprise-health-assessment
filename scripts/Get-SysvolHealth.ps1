@@ -12,9 +12,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain/DC with.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -24,7 +31,10 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ForestDomainControllers
+    $DomainControllers = Get-ForestDomainControllers -Credential $Credential
+
+    $WmiParams = @{}
+    if ($Credential) { $WmiParams["Credential"] = $Credential }
 
     $SysvolReport = foreach ($DC in $DomainControllers) {
 
@@ -36,7 +46,7 @@ try {
                 -Class "DfsrReplicatedFolderInfo" `
                 -ComputerName $DC.HostName `
                 -Filter "ReplicatedFolderName='SYSVOL Share'" `
-                -ErrorAction Stop
+                -ErrorAction Stop @WmiParams
 
             $State = switch ($DfsrState.State) {
                 0 { "Uninitialized" }

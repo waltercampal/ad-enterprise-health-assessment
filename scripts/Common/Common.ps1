@@ -112,15 +112,25 @@ function Get-ForestDomains {
         Used so assessment modules cover the whole forest (root domain +
         every child/tree domain) instead of only the domain the machine
         running the assessment happens to be joined to.
+
+    .PARAMETER Credential
+        Optional alternate credential to enumerate the forest with.
     #>
 
+    param(
+        [PSCredential]$Credential
+    )
+
+    $AdParams = @{ ErrorAction = "Stop" }
+    if ($Credential) { $AdParams["Credential"] = $Credential }
+
     try {
-        return @((Get-ADForest -ErrorAction Stop).Domains)
+        return @((Get-ADForest @AdParams).Domains)
     }
     catch {
         Write-ErrorMessage "Failed to enumerate forest domains, falling back to the current domain only: $($_.Exception.Message)"
         try {
-            return @((Get-ADDomain -ErrorAction Stop).DNSRoot)
+            return @((Get-ADDomain @AdParams).DNSRoot)
         }
         catch {
             return @()
@@ -141,11 +151,21 @@ function Get-ForestDomainControllers {
         (via Get-ForestDomains) and queries each one explicitly, so the
         assessment covers the root domain and every child domain rather than
         just the domain the machine running it happens to be joined to.
+
+    .PARAMETER Credential
+        Optional alternate credential to query every domain with.
     #>
 
-    $AllDCs = foreach ($DomainName in (Get-ForestDomains)) {
+    param(
+        [PSCredential]$Credential
+    )
+
+    $AdParams = @{ Filter = "*"; ErrorAction = "Stop" }
+    if ($Credential) { $AdParams["Credential"] = $Credential }
+
+    $AllDCs = foreach ($DomainName in (Get-ForestDomains -Credential $Credential)) {
         try {
-            Get-ADDomainController -Filter * -Server $DomainName -ErrorAction Stop
+            Get-ADDomainController @AdParams -Server $DomainName
         }
         catch {
             Write-WarningMessage "Could not enumerate Domain Controllers in domain '$DomainName': $($_.Exception.Message)"

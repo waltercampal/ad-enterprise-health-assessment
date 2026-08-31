@@ -10,9 +10,18 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain/DNS server with.
+    The DnsServer module cmdlets don't take -Credential directly, so this
+    opens a credentialed CIM session per server instead.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -22,15 +31,29 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ForestDomainControllers
+    $DomainControllers = Get-ForestDomainControllers -Credential $Credential
     $ZoneReport = @()
     $ServerReport = @()
 
     foreach ($DC in $DomainControllers) {
 
+        $CimSession = $null
+
         try {
 
-            $Zones = Get-DnsServerZone -ComputerName $DC.HostName -ErrorAction Stop
+            # Get-DnsServerZone/-Forwarder/-Scavenging don't accept -Credential
+            # directly - go through a credentialed CIM session instead when
+            # one was supplied, falling back to plain -ComputerName otherwise.
+            $DnsParams = @{}
+            if ($Credential) {
+                $CimSession = New-CimSession -ComputerName $DC.HostName -Credential $Credential -ErrorAction Stop
+                $DnsParams["CimSession"] = $CimSession
+            }
+            else {
+                $DnsParams["ComputerName"] = $DC.HostName
+            }
+
+            $Zones = Get-DnsServerZone @DnsParams -ErrorAction Stop
 
             $ZoneReport += foreach ($Zone in $Zones) {
                 [PSCustomObject]@{
@@ -43,8 +66,8 @@ try {
                 }
             }
 
-            $Forwarders = Get-DnsServerForwarder -ComputerName $DC.HostName -ErrorAction SilentlyContinue
-            $Scavenging = Get-DnsServerScavenging -ComputerName $DC.HostName -ErrorAction SilentlyContinue
+            $Forwarders = Get-DnsServerForwarder @DnsParams -ErrorAction SilentlyContinue
+            $Scavenging = Get-DnsServerScavenging @DnsParams -ErrorAction SilentlyContinue
 
             $ServerReport += [PSCustomObject]@{
                 Server            = $DC.HostName
@@ -57,6 +80,9 @@ try {
         }
         catch {
             Write-WarningMessage "Could not query DNS on $($DC.HostName): $($_.Exception.Message)"
+        }
+        finally {
+            if ($CimSession) { Remove-CimSession $CimSession -ErrorAction SilentlyContinue }
         }
 
     }

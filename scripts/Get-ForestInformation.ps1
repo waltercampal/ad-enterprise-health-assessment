@@ -6,9 +6,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query the forest with.
+
 .VERSION
-    0.2.0
+    0.3.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -18,7 +25,10 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $Forest = Get-ADForest
+    $AdParams = @{ ErrorAction = "Stop" }
+    if ($Credential) { $AdParams["Credential"] = $Credential }
+
+    $Forest = Get-ADForest @AdParams
 
     $Info = [PSCustomObject]@{
 

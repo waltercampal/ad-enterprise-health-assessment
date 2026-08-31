@@ -17,9 +17,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain with.
+
 .VERSION
-    0.2.0
+    0.3.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -29,7 +36,7 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ForestDomainControllers
+    $DomainControllers = Get-ForestDomainControllers -Credential $Credential
 
     $Inventory = foreach ($DC in $DomainControllers) {
 

@@ -11,9 +11,16 @@
     Walter Campal
     Horizon Labs
 
+.PARAMETER Credential
+    Optional alternate credential to query every domain/DC with.
+
 .VERSION
-    0.1.0
+    0.2.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -23,13 +30,16 @@ if (!(Test-RequiredModule -ModuleName ActiveDirectory)) { return }
 
 try {
 
-    $DomainControllers = Get-ForestDomainControllers
+    $DomainControllers = Get-ForestDomainControllers -Credential $Credential
+
+    $AdParams = @{ ErrorAction = "Stop" }
+    if ($Credential) { $AdParams["Credential"] = $Credential }
 
     $ReplicationReport = foreach ($DC in $DomainControllers) {
 
         try {
 
-            $Partners = Get-ADReplicationPartnerMetadata -Target $DC.HostName -ErrorAction Stop
+            $Partners = Get-ADReplicationPartnerMetadata -Target $DC.HostName @AdParams
 
             foreach ($Partner in $Partners) {
 

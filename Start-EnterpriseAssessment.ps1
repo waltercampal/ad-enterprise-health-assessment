@@ -4,13 +4,20 @@
 
 .DESCRIPTION
     Orchestrates all assessment modules and generates the final reports.
+    Prompts once for a credential and passes it to every module, so you
+    can run this as an account that isn't necessarily the one you're
+    logged into Windows with (e.g. one with the right permissions across
+    every domain in a multi-domain forest). Most Foundation checks are
+    plain read access - only the Get-GPOReport-free GPO metadata call
+    (Get-GPO itself) can't take an alternate credential; see
+    Get-GPOInventory.ps1's own notes.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
 Clear-Host
@@ -24,27 +31,29 @@ Write-Host ""
 
 Initialize-ReportsFolder
 
+$Credential = Get-Credential -Message "Credentials to run the Foundation assessment with (needs read access across every domain in the forest)"
+
 Write-Host "Starting assessment..." -ForegroundColor Yellow
 
-.\scripts\Get-ForestInformation.ps1
+.\scripts\Get-ForestInformation.ps1 -Credential $Credential
 
-.\scripts\Get-DomainInformation.ps1
+.\scripts\Get-DomainInformation.ps1 -Credential $Credential
 
-.\scripts\Get-FSMORoles.ps1
+.\scripts\Get-FSMORoles.ps1 -Credential $Credential
 
-.\scripts\Get-DomainControllerInventory.ps1
+.\scripts\Get-DomainControllerInventory.ps1 -Credential $Credential
 
-.\scripts\Get-SiteTopology.ps1
+.\scripts\Get-SiteTopology.ps1 -Credential $Credential
 
-.\scripts\Get-ReplicationStatus.ps1
+.\scripts\Get-ReplicationStatus.ps1 -Credential $Credential
 
-.\scripts\Get-SysvolHealth.ps1
+.\scripts\Get-SysvolHealth.ps1 -Credential $Credential
 
-.\scripts\Get-DnsAssessment.ps1
+.\scripts\Get-DnsAssessment.ps1 -Credential $Credential
 
-.\scripts\Get-GPOInventory.ps1
+.\scripts\Get-GPOInventory.ps1 -Credential $Credential
 
-.\scripts\Get-SecurityBaseline.ps1
+.\scripts\Get-SecurityBaseline.ps1 -Credential $Credential
 
 Write-Host ""
 Write-Host "Assessment completed successfully." -ForegroundColor Green
