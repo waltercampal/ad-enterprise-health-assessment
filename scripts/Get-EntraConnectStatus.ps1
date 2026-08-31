@@ -14,13 +14,22 @@
     wherever Entra Connect itself is installed) and must allow incoming
     PowerShell remoting (WinRM) from wherever this script runs.
 
+.PARAMETER Credential
+    Credential to remote into each Entra Connect server with (needs local
+    admin rights there). If omitted, and the servers list is non-empty,
+    you'll be prompted once.
+
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.2.0
+    0.3.0
 #>
+
+param(
+    [PSCredential]$Credential
+)
 
 . "$PSScriptRoot\Common\Common.ps1"
 
@@ -35,6 +44,10 @@ if ($EntraConnectServers.Count -eq 0) {
     return
 }
 
+if (!$Credential) {
+    $Credential = Get-Credential -Message "Credentials for Entra Connect servers (needs local admin rights on each server)"
+}
+
 try {
 
     $SchedulerReport = @()
@@ -44,7 +57,7 @@ try {
 
         try {
 
-            $Result = Invoke-Command -ComputerName $Server -ErrorAction Stop -ScriptBlock {
+            $Result = Invoke-Command -ComputerName $Server -Credential $Credential -ErrorAction Stop -ScriptBlock {
                 Import-Module ADSync -ErrorAction Stop
 
                 $Scheduler = Get-ADSyncScheduler

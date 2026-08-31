@@ -3,9 +3,10 @@
     Checks the health of Microsoft Entra Cloud Sync agents.
 
 .DESCRIPTION
-    Queries the "Microsoft Azure AD Connect Provisioning Agent" service
-    status on each configured Cloud Sync agent server via PowerShell
-    remoting. Edit $CloudSyncAgentServers to match your environment.
+    Queries the Provisioning Agent (Cloud Sync) service status on each
+    configured Cloud Sync agent server via PowerShell remoting. Matches
+    the service by name pattern rather than one exact hardcoded name.
+    Edit $CloudSyncAgentServers to match your environment.
 
 .PARAMETER Credential
     Credential to remote into each Cloud Sync agent server with (needs
@@ -46,21 +47,29 @@ try {
 
         try {
             $Service = Invoke-Command -ComputerName $AgentServer -Credential $Credential -ErrorAction Stop -ScriptBlock {
-                Get-Service -Name "AzureADConnectProvisioningAgentService" -ErrorAction Stop
+                Get-Service | Where-Object {
+                    $_.Name -like "*ProvisioningAgent*" -or $_.DisplayName -like "*Provisioning Agent*"
+                } | Select-Object -First 1
+            }
+
+            if (!$Service) {
+                throw "No service matching '*Provisioning Agent*' was found on this server."
             }
 
             [PSCustomObject]@{
-                Server  = $AgentServer
-                Status  = $Service.Status
-                Healthy = ($Service.Status -eq "Running")
+                Server      = $AgentServer
+                ServiceName = $Service.Name
+                Status      = $Service.Status
+                Healthy     = ($Service.Status -eq "Running")
             }
         }
         catch {
             Write-WarningMessage "Could not query Cloud Sync agent on '$AgentServer': $($_.Exception.Message)"
             [PSCustomObject]@{
-                Server  = $AgentServer
-                Status  = "Unreachable"
-                Healthy = $false
+                Server      = $AgentServer
+                ServiceName = $null
+                Status      = "Unreachable"
+                Healthy     = $false
             }
         }
 
