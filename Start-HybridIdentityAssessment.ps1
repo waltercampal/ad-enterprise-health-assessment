@@ -14,14 +14,17 @@
     NOTE: Get-EntraConnectStatus.ps1, Get-PtaAgentStatus.ps1, and
     Get-CloudSyncStatus.ps1 each need their server list edited to match
     your environment (see the top of each script) before they'll do
-    anything other than print a warning and skip.
+    anything other than print a warning and skip. If any of them are
+    configured, this orchestrator prompts once for the on-prem remoting
+    credential and passes it to all three, instead of each one prompting
+    separately.
 
 .AUTHOR
     Walter Campal
     Horizon Labs
 
 .VERSION
-    0.1.0
+    0.2.0
 #>
 
 Clear-Host
@@ -37,11 +40,13 @@ Initialize-ReportsFolder
 Write-Host ""
 Write-Host "Starting hybrid identity assessment..." -ForegroundColor Yellow
 
-.\scripts\Get-EntraConnectStatus.ps1
+$OnPremCredential = Get-Credential -Message "Credentials for on-prem Entra Connect/PTA/Cloud Sync servers (needs local admin rights on each - leave blank/Cancel to skip if none of them are configured)"
 
-.\scripts\Get-PtaAgentStatus.ps1
+.\scripts\Get-EntraConnectStatus.ps1 -Credential $OnPremCredential
 
-.\scripts\Get-CloudSyncStatus.ps1
+.\scripts\Get-PtaAgentStatus.ps1 -Credential $OnPremCredential
+
+.\scripts\Get-CloudSyncStatus.ps1 -Credential $OnPremCredential
 
 .\scripts\Get-EntraIdAssessment.ps1
 
