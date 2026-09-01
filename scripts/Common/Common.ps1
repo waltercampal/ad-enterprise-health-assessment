@@ -180,13 +180,24 @@ function Export-AssessmentCsv {
 
     param(
 
-        [Parameter(Mandatory)]
+        # Not [Parameter(Mandatory)]: when every item in a $DomainName in
+        # (foreach ...) { ... } loop hits its catch block, PowerShell yields
+        # $null rather than an empty array, and a mandatory parameter rejects
+        # $null outright - crashing the whole module even though "zero
+        # servers were reachable" is exactly the kind of finding this
+        # toolkit exists to report, not something to crash on.
+        [AllowNull()]
         $Data,
 
         [Parameter(Mandatory)]
         [string]$Name
 
     )
+
+    if ($null -eq $Data -or @($Data).Count -eq 0) {
+        Write-WarningMessage "No data collected for '$Name' - every query failed or returned nothing. Skipping CSV export."
+        return
+    }
 
     Initialize-ReportsFolder
 

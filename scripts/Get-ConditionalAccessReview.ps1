@@ -25,8 +25,9 @@ try {
 
     # Reuse an existing Graph session (e.g. from another module run in the same
     # orchestrator) instead of forcing a second interactive sign-in.
+    # -UseDeviceCode: see Get-EntraIdAssessment.ps1 for why.
     if (!(Get-MgContext)) {
-        Connect-MgGraph -Scopes "Policy.Read.All" -NoWelcome -ErrorAction Stop
+        Connect-MgGraph -Scopes "Policy.Read.All" -UseDeviceCode -NoWelcome -ErrorAction Stop
     }
 
     $Policies = Get-MgIdentityConditionalAccessPolicy

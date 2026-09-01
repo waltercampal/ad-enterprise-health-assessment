@@ -25,8 +25,13 @@ try {
 
     # Reuse an existing Graph session (e.g. from another module run in the same
     # orchestrator) instead of forcing a second interactive sign-in.
+    # -UseDeviceCode instead of the default interactive browser popup: the
+    # popup can open behind other windows (VS Code, etc.) in a terminal-heavy
+    # session and silently get treated as a cancelled sign-in. Device code
+    # prints a code right in the console to enter at microsoft.com/devicelogin
+    # from any browser, which doesn't depend on window focus.
     if (!(Get-MgContext)) {
-        Connect-MgGraph -Scopes "Organization.Read.All", "User.Read.All", "RoleManagement.Read.Directory" -NoWelcome -ErrorAction Stop
+        Connect-MgGraph -Scopes "Organization.Read.All", "User.Read.All", "RoleManagement.Read.Directory" -UseDeviceCode -NoWelcome -ErrorAction Stop
     }
 
     $Org = Get-MgOrganization
