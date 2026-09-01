@@ -12,10 +12,13 @@
     Horizon Labs
 
 .PARAMETER Credential
-    Optional alternate credential to query every domain/DC with.
+    Optional alternate credential to query every domain/DC with. When
+    supplied, this remotes into each DC via PowerShell remoting (WinRM)
+    and runs Get-WinEvent there, rather than using Get-WinEvent's own
+    -ComputerName/-Credential combination directly.
 
 .VERSION
-    0.2.0
+    0.3.0
 #>
 
 param(
@@ -34,19 +37,48 @@ try {
     $LogNames = @("System", "Application", "Directory Service")
     $Since = (Get-Date).AddHours(-24)
 
-    $WinEventParams = @{ ErrorAction = "Stop" }
-    if ($Credential) { $WinEventParams["Credential"] = $Credential }
-
     $EventReport = foreach ($DC in $DomainControllers) {
+
+        # Get-WinEvent -ComputerName combined with -Credential goes through
+        # the legacy RPC-based Event Log remoting protocol instead of WinRM,
+        # which can hang for minutes per unreachable server on a firewalled
+        # network (confirmed against a real environment). Go through
+        # Invoke-Command (WinRM, same reliable mechanism used elsewhere in
+        # this toolkit) instead when a credential is supplied - one session
+        # per DC, reused across all 3 logs.
+        $Session = $null
+
+        if ($Credential) {
+            try {
+                $Session = New-PSSession -ComputerName $DC.HostName -Credential $Credential -ErrorAction Stop
+            }
+            catch {
+                Write-WarningMessage "Could not open a PS session to $($DC.HostName): $($_.Exception.Message)"
+            }
+        }
 
         foreach ($LogName in $LogNames) {
 
             try {
 
-                $Events = Get-WinEvent -ComputerName $DC.HostName @WinEventParams -FilterHashtable @{
-                    LogName   = $LogName
-                    Level     = 1, 2 # Critical, Error
-                    StartTime = $Since
+                if ($Credential) {
+                    if (!$Session) { throw "No PS session available for $($DC.HostName)." }
+
+                    $Events = Invoke-Command -Session $Session -ErrorAction Stop -ScriptBlock {
+                        param($LogName, $Since)
+                        Get-WinEvent -FilterHashtable @{
+                            LogName   = $LogName
+                            Level     = 1, 2 # Critical, Error
+                            StartTime = $Since
+                        } -ErrorAction Stop
+                    } -ArgumentList $LogName, $Since
+                }
+                else {
+                    $Events = Get-WinEvent -ComputerName $DC.HostName -ErrorAction Stop -FilterHashtable @{
+                        LogName   = $LogName
+                        Level     = 1, 2 # Critical, Error
+                        StartTime = $Since
+                    }
                 }
 
                 [PSCustomObject]@{
@@ -65,9 +97,11 @@ try {
             }
             catch {
                 # Get-WinEvent throws when a FilterHashtable simply matches
-                # nothing - that's not a failure, it means zero Critical/Error
-                # events in the window (good news), not something to warn about.
-                if ($_.Exception.Message -match "No events were found") {
+                # nothing, or when the log doesn't exist on this DC - neither
+                # is a real failure. When the exception traveled back through
+                # Invoke-Command its .NET type isn't always preserved, so
+                # fall back to matching on the message text too.
+                if ($_.Exception.Message -match "No events were found" -or $_.Exception.Message -match "no such log") {
                     [PSCustomObject]@{
                         Server      = $DC.HostName
                         LogName     = $LogName
@@ -80,6 +114,8 @@ try {
             }
 
         }
+
+        if ($Session) { Remove-PSSession $Session -ErrorAction SilentlyContinue }
 
     }
 
