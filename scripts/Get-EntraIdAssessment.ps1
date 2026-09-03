@@ -24,14 +24,19 @@ if (!(Test-RequiredModule -ModuleName Microsoft.Graph.Authentication)) { return 
 try {
 
     # Reuse an existing Graph session (e.g. from another module run in the same
-    # orchestrator) instead of forcing a second interactive sign-in.
+    # orchestrator) instead of forcing a second interactive sign-in - but only
+    # if it actually already has the scopes this module needs, otherwise
+    # later calls fail with a confusing authorization error instead of
+    # prompting for the missing scope up front.
     # -UseDeviceCode instead of the default interactive browser popup: the
     # popup can open behind other windows (VS Code, etc.) in a terminal-heavy
     # session and silently get treated as a cancelled sign-in. Device code
     # prints a code right in the console to enter at microsoft.com/devicelogin
     # from any browser, which doesn't depend on window focus.
-    if (!(Get-MgContext)) {
-        Connect-MgGraph -Scopes "Organization.Read.All", "User.Read.All", "RoleManagement.Read.Directory" -UseDeviceCode -NoWelcome -ErrorAction Stop
+    $RequiredScopes = @("Organization.Read.All", "User.Read.All", "RoleManagement.Read.Directory")
+    $CurrentContext = Get-MgContext
+    if (!$CurrentContext -or ($RequiredScopes | Where-Object { $_ -notin $CurrentContext.Scopes })) {
+        Connect-MgGraph -Scopes $RequiredScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
     }
 
     $Org = Get-MgOrganization

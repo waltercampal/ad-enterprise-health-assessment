@@ -23,11 +23,13 @@ if (!(Test-RequiredModule -ModuleName Microsoft.Graph.Identity.SignIns)) { retur
 
 try {
 
-    # Reuse an existing Graph session (e.g. from another module run in the same
-    # orchestrator) instead of forcing a second interactive sign-in.
+    # Reuse an existing Graph session only if it already has the scope this
+    # module needs - see Get-EntraIdAssessment.ps1 for why that matters.
     # -UseDeviceCode: see Get-EntraIdAssessment.ps1 for why.
-    if (!(Get-MgContext)) {
-        Connect-MgGraph -Scopes "Policy.Read.All" -UseDeviceCode -NoWelcome -ErrorAction Stop
+    $RequiredScopes = @("Policy.Read.All")
+    $CurrentContext = Get-MgContext
+    if (!$CurrentContext -or ($RequiredScopes | Where-Object { $_ -notin $CurrentContext.Scopes })) {
+        Connect-MgGraph -Scopes $RequiredScopes -UseDeviceCode -NoWelcome -ErrorAction Stop
     }
 
     $Policies = Get-MgIdentityConditionalAccessPolicy
