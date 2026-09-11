@@ -11,3 +11,6 @@
 *.ps1xml.bak
 *.log
 .vscode/
+
+# Notas personales con rutas/comandos internos del banco - nunca público.
+/Instrucciones.md
